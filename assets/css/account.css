@@ -1,0 +1,93 @@
+/* NISHA student accounts */
+.auth-shell{display:grid;grid-template-columns:minmax(0,1fr) minmax(320px,490px);gap:clamp(44px,8vw,130px);align-items:center;max-width:1160px;margin:0 auto;padding:76px 28px 100px;min-height:calc(100vh - 180px)}
+.auth-story{max-width:525px;padding:10px 0 34px}
+.auth-story h1{font-size:clamp(42px,5vw,68px);font-weight:600;line-height:1.08;letter-spacing:-.055em;margin:24px 0;color:#212c28}
+.auth-story h1 em{font-style:normal;color:#1d523d}
+.auth-lead{color:#697169;font-size:17px;line-height:1.85;max-width:450px}
+.auth-badge{display:inline-flex;align-items:center;gap:9px;padding:8px 13px;border:1px solid #c9d5c4;border-radius:40px;font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#1d523d}
+.auth-badge:before{content:"";width:7px;height:7px;background:#709653;border-radius:50%}
+.auth-points{display:grid;gap:17px;list-style:none;padding:0;margin:29px 0 0;font-size:14px;color:#3b4940}
+.auth-points li{display:flex;align-items:center;gap:12px;line-height:1.6}
+.auth-points li:before{content:"✓";display:grid;place-items:center;flex:0 0 23px;width:23px;height:23px;border-radius:50%;background:#e3edb2;color:#1d523d;font-size:13px;font-weight:700}
+.auth-note{display:flex;align-items:center;gap:16px;margin:36px 0 0;padding:21px 23px;background:#e9eddf;border-radius:12px;font-size:13px;line-height:1.85;max-width:430px;color:#506149;border-left:3px solid #adc079}
+.auth-note p{margin:0}
+.auth-note strong{display:block;color:#253a2b;font-size:14px;margin-bottom:4px}
+.auth-card{background:#fff;border:1px solid #e6e8df;border-radius:20px;box-shadow:0 14px 54px #27352507;padding:39px 38px}
+.auth-card h2{margin:0 0 10px;color:#212c28;font-size:30px;line-height:1.2;letter-spacing:-.045em;font-weight:600}
+.auth-card .form-intro{font-size:13px;line-height:1.8;color:#7a8076;margin:0 0 27px}
+.form-field{display:flex;flex-direction:column;gap:8px;margin-bottom:19px}
+.form-field label{font-size:12px;line-height:1.5;font-weight:650;color:#3b453e}
+.form-field input,.form-field select{width:100%;box-sizing:border-box;border:1px solid #dedfd6;border-radius:8px;background:#fff;padding:13px 14px;min-height:47px;color:#27372c;outline:none;font:inherit;font-size:13px;transition:border-color .2s,box-shadow .2s}
+.form-field input::placeholder{color:#a2a69c}
+.form-field input:focus,.form-field select:focus{border-color:#4b755b;box-shadow:0 0 0 3px #1d523d12}
+.form-field input[aria-invalid=true]{border-color:#a94a39}
+.form-error,.form-success,.setup-notice{border-radius:9px;padding:13px 15px;margin:0 0 22px;font-size:12px;line-height:1.8}
+.form-error{background:#fff1eb;border:1px solid #f1d5c9;color:#924731}
+.form-error ul{margin:0;padding-left:17px}
+.form-success{background:#edf4e5;border:1px solid #cddbba;color:#365b33}
+.setup-notice{background:#f7f4e8;border:1px solid #e9e0be;color:#75643b}
+.setup-notice a{color:inherit;text-underline-offset:3px}
+.form-hint,.form-password-note{font-size:11px;color:#8b9084;line-height:1.75;margin:1px 0 0}
+.form-submit{width:100%;justify-content:center;min-height:49px;margin-top:8px;border:0;cursor:pointer;font-family:inherit;font-size:13px;font-weight:600}
+.form-submit>span{margin-left:14px;font-size:18px}
+.form-submit:disabled{opacity:.5;cursor:not-allowed}
+.auth-switch{border-top:1px solid #eeeee7;margin:27px 0 0;padding-top:23px;text-align:center;font-size:12px;line-height:1.8;color:#7d8478}
+.auth-switch a{color:#1d523d;font-weight:650;text-underline-offset:3px;text-decoration-thickness:1px}
+.auth-card a:focus-visible,.auth-card button:focus-visible,.practice-path-card a:focus-visible,.account-actions a:focus-visible,.account-banner a:focus-visible{outline:3px solid #aabc71;outline-offset:5px}
+.account-page{max-width:1200px;margin:0 auto;padding:54px 28px 90px}
+.account-intro{display:flex;justify-content:space-between;align-items:flex-end;gap:25px;margin-bottom:33px}
+.account-intro h1{font-size:clamp(32px,4vw,48px);line-height:1.18;letter-spacing:-.05em;font-weight:600;margin:12px 0;color:#212c28}
+.account-intro p{font-size:14px;line-height:1.8;color:#7a8076;margin:0;max-width:600px}
+.account-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding-bottom:3px}
+.account-actions .btn{white-space:nowrap;font-size:12px;padding:13px 20px;min-height:43px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;margin-bottom:30px}
+.stat-card{position:relative;overflow:hidden;min-height:154px;padding:25px 27px;border:1px solid #e2e5d9;background:#fff;border-radius:13px;box-sizing:border-box}
+.stat-card:first-child{background:#1d523d;color:#fff;border-color:#1d523d}
+.stat-card:nth-child(2){background:#e9efcc;border-color:#e0e7c4}
+.stat-label{display:block;font-size:11px;font-weight:500;line-height:1.5;color:#7c8676;letter-spacing:.02em}
+.stat-card:first-child .stat-label,.stat-card:first-child .stat-helper{color:#c1d6c2}
+.stat-value{display:block;font-size:37px;line-height:1.3;font-weight:500;letter-spacing:-.05em;margin:10px 0 5px;color:#263b2c}
+.stat-value small{font-size:16px;letter-spacing:0}
+.stat-card:first-child .stat-value{color:#f2f6df}
+.stat-helper{font-size:11px;color:#87907c;line-height:1.65}
+.dashboard-main{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(270px,1fr);align-items:start;gap:24px}
+.dashboard-panel{background:#fff;border:1px solid #e3e6dc;border-radius:14px;padding:26px;overflow:hidden;margin-bottom:24px}
+.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:15px;margin-bottom:23px}
+.panel-heading h2{font-size:19px;font-weight:600;letter-spacing:-.035em;line-height:1.4;margin:0;color:#2b392d}
+.panel-heading p{font-size:12px;line-height:1.8;color:#8a9083;margin:5px 0 0}
+.panel-heading>a{font-size:11px;color:#50764e;text-decoration:none;white-space:nowrap}
+.practice-paths{display:grid;grid-template-columns:1fr;gap:16px}
+.practice-path-card{position:relative;display:flex;flex-direction:column;align-items:flex-start;min-height:210px;padding:22px;border:1px solid #e5e8dc;background:#f9faf4;border-radius:11px;box-sizing:border-box;text-decoration:none;color:#1d523d}
+.practice-path-card:hover{border-color:#9eaf91}
+.practice-path-card:focus-visible{outline:3px solid #aabc71;outline-offset:4px}
+.practice-path-card>strong{margin-top:auto;font-size:12px}
+.practice-path-card:nth-child(2){background:#f8f3ed;border-color:#ede3d8}
+.practice-path-card h3{font-size:21px;font-weight:550;letter-spacing:-.035em;line-height:1.3;margin:17px 0 7px;color:#27392d}
+.practice-path-card p{font-size:12px;color:#7e8777;line-height:1.85;margin:0 0 19px}
+.practice-path-card>a{margin-top:auto;color:#1d523d;font-size:12px;line-height:1.5;font-weight:600;text-decoration:none}
+.practice-path-card>a:after{content:"→";margin-left:8px;font-size:15px}
+.exam-tag{display:inline-block;line-height:1.3;padding:5px 8px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.055em;color:#467044;background:#e5edcc}
+.exam-tag.ielts{background:#e5edcc;color:#426b41}
+.exam-tag.pte{background:#f0ddcc;color:#996844}
+.attempts-table{width:100%;border-collapse:collapse;text-align:left;font-size:12px}
+.attempts-table-wrap{overflow-x:auto}
+.attempts-table th{font-weight:500;color:#8a9183;font-size:10px;padding:0 10px 14px;border-bottom:1px solid #eceee4}
+.attempts-table td{padding:17px 10px;color:#5a6755;border-bottom:1px solid #eff0e9;line-height:1.6}
+.attempts-table th:first-child,.attempts-table td:first-child{padding-left:0}
+.attempts-table th:last-child,.attempts-table td:last-child{text-align:right;padding-right:0}
+.attempts-table tr:last-child td{border-bottom:0;padding-bottom:3px}
+.attempts-table td strong{font-weight:600;color:#2d432f}
+.attempts-table a{color:#426d3f;text-decoration:none}
+.empty-state{text-align:center;padding:31px 18px;border:1px dashed #dce2cf;background:#fafbf6;border-radius:9px;color:#8b927f;font-size:12px;line-height:1.9}
+.empty-state h3{font-size:17px;line-height:1.5;letter-spacing:-.025em;color:#43513c;font-weight:550;margin:0 0 8px}
+.empty-state p{margin:0 auto 17px;max-width:300px}
+.empty-state .btn{font-size:11px;padding:10px 17px}
+.account-banner{position:relative;overflow:hidden;background:#edf0de;border-radius:12px;padding:28px;color:#3e5937}
+.account-banner:after{content:"✳";position:absolute;right:-16px;bottom:-35px;font-size:150px;line-height:1;color:#dce5bb;pointer-events:none}
+.account-banner h3{position:relative;z-index:1;font-size:22px;line-height:1.3;letter-spacing:-.035em;font-weight:550;margin:0 0 12px;max-width:240px}
+.account-banner p{position:relative;z-index:1;font-size:12px;line-height:1.9;color:#607151;margin:0;max-width:920px}
+.account-banner a{position:relative;z-index:1;color:#3b6039;font-size:12px;font-weight:650;text-underline-offset:4px}
+@media(min-width:1100px){.auth-card{transform:translateY(3px)}}
+@media(max-width:900px){.auth-shell{gap:35px;padding-top:50px;padding-bottom:65px}.auth-card{padding:30px 27px}.auth-story h1{font-size:49px}.dashboard-main{grid-template-columns:1fr}.practice-paths{grid-template-columns:repeat(2,minmax(0,1fr))}.account-banner{height:100%;box-sizing:border-box}.account-intro{align-items:flex-start}.account-actions{justify-content:flex-end;max-width:200px}}
+@media(max-width:680px){.auth-shell{grid-template-columns:1fr;gap:25px;padding:36px 20px 56px}.auth-story{max-width:none;padding:0}.auth-story h1{font-size:40px;max-width:440px;margin:18px 0}.auth-lead{font-size:14px;line-height:1.8}.auth-points{display:none}.auth-note{display:none}.auth-card{max-width:none;padding:29px 24px;border-radius:15px}.auth-card h2{font-size:27px}.auth-card .form-intro{margin-bottom:24px}.account-page{padding:34px 18px 60px}.account-intro{flex-direction:column;gap:19px;margin-bottom:27px}.account-intro h1{font-size:35px}.account-intro p{font-size:13px}.account-actions{max-width:none;justify-content:flex-start}.dashboard-grid{gap:10px;margin-bottom:22px}.stat-card{padding:17px 15px;min-height:146px;border-radius:10px}.stat-label{font-size:10px}.stat-value{font-size:29px;margin:12px 0 6px}.stat-helper{font-size:9px;line-height:1.65}.dashboard-panel{padding:22px 19px}.panel-heading h2{font-size:18px}.practice-paths{gap:11px}.practice-path-card{padding:17px 14px;min-height:220px}.practice-path-card h3{font-size:19px}.practice-path-card p{font-size:11px}.practice-path-card>a{font-size:11px}.dashboard-main{gap:0}.dashboard-main>aside{display:block}.dashboard-main>aside .dashboard-panel{margin-bottom:22px}.account-banner{padding:25px}.attempts-table{font-size:11px}.attempts-table td,.attempts-table th{padding-left:6px;padding-right:6px}}
+@media(prefers-reduced-motion:reduce){.form-field input,.form-field select{transition:none}}
