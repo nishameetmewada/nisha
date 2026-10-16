@@ -25,6 +25,7 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
 
+            <aside class="studio-fullmock-banner" aria-label="Full-length exam practice"><div><span class="eyebrow">READY FOR THE WHOLE EXPERIENCE?</span><h2>Step into the full exam room.</h2><p>Longer passages, realistic task formats, and timed sections for IELTS Academic and PTE Academic.</p></div><a class="btn btn-primary" href="exams.php">Explore full mock exams <span aria-hidden="true">→</span></a></aside>
             <div class="practice-studio">
                 <div class="practice-studio-heading">
                     <div><p class="eyebrow">THE PRACTICE STUDIO</p><h2>Make this session yours.</h2></div>

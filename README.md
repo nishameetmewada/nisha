@@ -9,9 +9,14 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - IELTS and PTE reading and listening: original six-question sets, timer, question navigation, answer explanations, retries, and saved quiz results for signed-in students.
 - Writing prompts with a word count, reflection checklist, and text download.
 - Speaking prompts with optional browser microphone recording, playback, and download. Recordings never upload to the server.
-- A MySQL schema for users and practice history.
+- Full IELTS Academic mock: 40 listening and 40 reading questions, both writing tasks, and three speaking parts.
+- Full PTE Academic mock: 68 items covering 22 section-qualified formats, including group discussion and situation responses.
+- Timed sections, resumed browser sessions, server-marked objective answers, reflection rubrics, and saved full-mock reports.
+- A MySQL schema for users, short practice history, and full-mock reports.
 
-The exercises are short skill-building activities, not full-length official mock exams. Reading and listening report raw correct-answer totals, not official exam scores. Writing and speaking have no automated marking. NISHA is an independent practice platform and is not affiliated with IELTS or Pearson PTE. The homepage's growth illustration is decorative, not a real student's results. The hero portrait was generated for this website.
+Short skill exercises and full-length independent Academic mocks are both included. The IELTS mock uses 164 minutes across its combined practice sequence; the PTE mock uses 140 minutes. These are NISHA mock budgets, not exact guarantees of current test-centre timing. Objective tasks report practice points rather than official exam scores. Writing and speaking have no automated marking. NISHA is an independent practice platform and is not affiliated with IELTS or Pearson PTE. The homepage's growth illustration is decorative, not a real student's results. The hero portrait was generated for this website.
+
+For full exam formats, timing, audio limitations, privacy, scoring, and upgrade instructions, read [Full mock exams](docs/full-mock-exams.md). For browser warnings on a deployed site, see [Deployment security checks](docs/deployment-security.md).
 
 ## Put it on Hostinger
 
@@ -23,7 +28,7 @@ Use a Hostinger **web hosting plan with PHP and MySQL**. This project is deploye
 4. Use File Manager or SFTP to upload the **contents** of this project into the site's `public_html` directory. `index.php` should sit directly in `public_html`, alongside `assets`, `includes`, `config`, `api`, and the other PHP pages. Preserve the root `.htaccess` and each protected folder's `.htaccess`. Remove a default `index.html` if it overrides your new homepage.
 5. Copy `config/config.example.php` to **`config/config.php`**. Edit only this new file using the database values from step 2. For Hostinger shared hosting, `db_host` is usually `localhost`; use the value actually shown in hPanel. Use port `3306` unless instructed otherwise. Never put database values in JavaScript or commit this private file to Git. Keep file permissions restricted to your hosting user and PHP (typically 600 or 640, depending on the host).
 6. Enable your domain's SSL certificate and turn on **Force HTTPS** in hPanel. HTTPS is required for browser microphone recording on a public site and for secure session cookies. No email, paid API, or external AI key is needed.
-7. Visit your domain, create a new account, finish a reading or listening session, and check that the saved result appears on **My dashboard**. Sign out and sign in again. On your domain, requests to `/config/config.php`, `/database/schema.sql`, and `/includes/bootstrap.php` should return a forbidden response; the supplied Apache/LiteSpeed rules protect those directories.
+7. Visit your domain, create a new account, finish a reading/listening session or full mock, and check that the saved result appears on **My dashboard**. Sign out and sign in again. On your domain, requests to `/config/config.php`, `/database/schema.sql`, and `/includes/bootstrap.php` should return a forbidden response; the supplied Apache/LiteSpeed rules protect those directories.
 
 A deployment ZIP is provided separately with the project files at its root. It includes the example configuration but **does not include the local database configuration, students, passwords, database data, or development runtime**. Extract it into `public_html`, then complete steps 2, 3, 5, 6, and 7. Do not upload the `.git` directory, development tools, or database backups.
 
@@ -69,15 +74,21 @@ The prepared cloud instance retains PHP and MariaDB tools outside this repositor
 | `includes/header.php`, `includes/footer.php` | Shared navigation and footer |
 | `includes/practice-data.php` | Original practice sets, prompts, and explanations |
 | `assets/js/practice.js` | Interactive practice behavior |
+| `includes/exams/` | Original full exam content |
+| `exams.php`, `assets/js/exams.js` | Full exam room and timed runner |
+| `includes/exam-grading.php` | Server-side practice marking |
 | `database/schema.sql` | Database tables |
+| `database/migrations/002_full_exams.sql` | Add full mock history to an existing installation |
 | `config/config.php` | Your private server settings; ignored by Git |
 
-Add more original practice sets by extending the practice data and studio selector together. This starter currently has one six-question set per exam and objective skill (24 questions total). The question answers are delivered to the browser for instant practice feedback; these exercises are not secure proctored assessments.
+Add more original practice sets by extending the practice data and studio selector together. The short studio has one six-question set per exam and objective skill (24 questions total). Short-studio answers are delivered to the browser for instant practice feedback. Full mocks keep answer keys on the server until final marking. Neither path is a secure proctored assessment.
 
 ## Readiness checks
 
 - Check PHP syntax: `find . -name '*.php' -not -path './config/config.php' -exec php -l {} \;`.
-- Load the home, registration, login, and practice pages at desktop and mobile widths.
+- Run `php tests/exam-integrity.php` for full-exam content and marking regression checks.
+- Load the home, registration, login, practice, and full mock pages at desktop and mobile widths.
+- Test full-mock resume, section expiry, forward-only PTE navigation, server submission, and saved history.
 - Register, sign out, sign in, complete a quiz, and confirm the dashboard result survives a new login.
 - Test IELTS/PTE selection, question navigation, unanswered-question confirmation, feedback, and retry.
 - Check a listening exercise with browser audio and its transcript. Audio requires the browser's speech-synthesis capability; voice quality and offline availability depend on the device.
