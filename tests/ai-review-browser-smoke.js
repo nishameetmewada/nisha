@@ -11,6 +11,7 @@ const root = path.resolve(__dirname, '..');
 const php = process.env.NISHA_PHP_BIN || '/workspace/.tools/bin/php';
 const artifacts = fs.mkdtempSync('/tmp/nisha-ai-browser-');
 const config = JSON.parse(execFileSync(php, ['-r', `require 'includes/ai-review-service.php'; $sessions=[]; foreach(nisha_learning_catalog() as $course) foreach($course['modules'] as $module) { $exam=nisha_resolve_exam($module['practice_id']); foreach(nisha_exam_items($exam) as $item) if(in_array($item['type'],['essay','spoken'],true) && !isset($sessions[$item['type']])) $sessions[$item['type']]=['exam'=>$exam,'item'=>$item]; } echo json_encode(['configured'=>nisha_ai_configured(),'sessions'=>$sessions]);`], { cwd: root, encoding: 'utf8' }));
+const pteWriting = JSON.parse(execFileSync(php, ['-r', `require 'includes/ai-review-service.php'; echo json_encode(nisha_resolve_exam('practice.pte-academic.writing-summarize-written-text'));`], { cwd: root, encoding: 'utf8' }));
 assert.equal(config.configured, false, 'This no-key HTTP test refuses to run when paid AI is configured.');
 let server, browser, context, page, email;
 let base, checks = 0;
@@ -28,25 +29,61 @@ const api = (payload, csrf = true, contentType = 'application/json') => page.eva
 async function start(id) {
     await page.goto(`${base}/exams.php?exam=${encodeURIComponent(id)}&start=1`);
     if (await page.locator('#exam-runner').isVisible()) return;
+    if (await page.locator('#exam-result').isVisible()) {
+        await page.locator('#start-new-attempt').click();
+        await page.locator('#exam-confirm-dialog[open]').waitFor();
+        await page.locator('#exam-confirm-yes').click();
+    }
     await page.locator('#exam-setup-dialog').waitFor({ state: 'visible' });
     await page.locator('#assisted-mode').check(); await page.locator('#ready-confirmed').check();
     await page.locator('#begin-exam').click();
     await page.locator('#exam-runner:not([hidden])').waitFor();
 }
+async function finishCurrentPractice() {
+    await page.locator('#submit-exam-early').click();
+    await page.locator('#exam-confirm-dialog[open]').waitFor();
+    await page.locator('#exam-confirm-yes').click();
+    await page.locator('#exam-result:not([hidden])').waitFor();
+}
+async function localResult(id) {
+    return page.evaluate(examId => {
+        const data = JSON.parse(document.querySelector('#exam-data').textContent);
+        const exam = data.exams[examId];
+        const key = `nisha:fullmock:${data.userScope}:${exam.id}:${exam.version}`;
+        return { key, state: JSON.parse(localStorage.getItem(key)) };
+    }, id);
+}
+async function restoreLegacyResult(id) {
+    const saved = await localResult(id);
+    assert.equal(saved.state.phase, 'results', 'The old-copy regression needs a real completed result');
+    // An already deployed device result may retain this old server note even
+    // after application assets have been updated. Replace only that old note;
+    // retain the real result, answers, attempt ID and normal restore path.
+    saved.state.resultEnvelope.result.grading_note = 'Objective raw practice points only. Writing and speaking require self-review and have no automatic score.';
+    await page.addInitScript(({ key, state, marker }) => {
+        if (sessionStorage.getItem(marker)) return;
+        localStorage.setItem(key, JSON.stringify(state));
+        sessionStorage.setItem(marker, 'used');
+    }, { ...saved, marker: crypto.randomUUID() });
+    await page.reload();
+    await page.locator('#exam-result:not([hidden])').waitFor();
+    return saved;
+}
 function reviewEntry(payload, transcript) {
     const spoken = typeof transcript === 'string';
+    const pte = payload.exam_id.includes('pte-');
     return { id: ++reviewEntry.id, exam_id: payload.exam_id, exam_version: payload.exam_version, item_id: payload.item_id, attempt_id: payload.attempt_id, response: payload.response,
-        review: { mode: spoken ? 'speaking-transcript' : 'writing', score: { label: spoken ? 'Speaking content and language review' : 'IELTS Writing practice band estimate', value: spoken ? 70 : 6.5, max: spoken ? 100 : 9, unit: spoken ? '%' : 'band' },
-            criteria: [{ label: 'Task response', score: spoken ? 70 : 6.5, max: spoken ? 100 : 9, feedback: 'Develop one specific example.' }],
+        review: { mode: spoken ? 'speaking-transcript' : 'writing', score: { label: spoken ? 'Speaking content and language review' : pte ? 'PTE Writing practice review' : 'IELTS Writing practice band estimate', value: spoken ? 70 : pte ? 65 : 6.5, max: spoken || pte ? 100 : 9, unit: spoken || pte ? '%' : 'band' },
+            criteria: [{ label: 'Task response', score: spoken ? 70 : pte ? 65 : 6.5, max: spoken || pte ? 100 : 9, feedback: 'Develop one specific example.' }],
             summary: '<img src=x onerror="window.__aiXss=1"> A clear central idea.', strengths: ['Relevant main idea.'], improvements: [{ issue: 'Develop the example.', evidence: 'public transport', suggestion: 'Explain how this benefits students.', example: 'A frequent bus route reduces waiting time.' }],
             next_steps: ['Add one specific example.', 'Check sentence boundaries.', 'Review the word range.'], improved_sample: '<script>window.__aiXss=2</script> Learning example: Public transport helps students arrive on time.',
             limitations: ['AI-generated practice estimate; not an official result.', ...(spoken ? ['Pronunciation and oral fluency were not assessed.'] : [])], transcript: spoken ? transcript : null, word_count: 18, model: 'deterministic-browser-fixture', reviewed_at: new Date().toISOString() } };
 }
 reviewEntry.id = 1000;
-async function enableUiFixture() {
+async function enableUiFixture(targetContext = context) {
     // Only the browser copy of public availability is changed. The actual HTTP
     // endpoint remains unconfigured; subsequent UI calls are explicitly intercepted.
-    await context.route('**/exams.php?*', async route => {
+    await targetContext.route('**/exams.php?*', async route => {
         const response = await route.fetch();
         let body = await response.text();
         body = body.replace(/(<script id="exam-data" type="application\/json">)([\s\S]*?)(<\/script>)/, (_, open, json, close) => {
@@ -87,10 +124,25 @@ async function upload(buffer, mime = 'audio/wav') {
     page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
     const { exam, item } = config.sessions.essay;
     await start(exam.id);
+    const assetUrls = await page.locator('script[src],link[rel="stylesheet"]').evaluateAll(elements => elements.map(element => element.src || element.href));
+    ok(assetUrls.some(value => new URL(value).pathname.endsWith('/assets/js/exams.js')) && assetUrls.some(value => new URL(value).pathname.endsWith('/assets/js/ai-review.js')) && assetUrls.every(value => {
+        const url = new URL(value);
+        const localFile = path.join(root, url.pathname);
+        return url.origin === base && url.searchParams.get('v') === crypto.createHash('sha256').update(fs.readFileSync(localFile)).digest('hex').slice(0, 16);
+    }), 'Rendered exam scripts and styles use their actual content version so an older browser cache gets the changed files');
     await page.locator('.exam-writing-area').fill(responseText);
     const guestPanel = page.locator('.ai-review-panel');
     await guestPanel.waitFor();
     ok(await guestPanel.locator('[data-ai-action]').isDisabled() && (await guestPanel.innerText()).includes('Sign in'), 'Guests see an honest sign-in requirement and cannot request paid AI');
+    await finishCurrentPractice();
+    ok(await page.locator('#result-ai-status').getAttribute('data-ai-state') === 'setup' && await page.locator('#result-ai-status').isVisible() && await page.locator('#result-ai-sign-in').isVisible() && /sign in/i.test(await page.locator('#result-ai-message').innerText()), 'Unconfigured guest results explain API setup and the sign-in requirement above the answer details');
+    ok((await page.locator('#exam-result-points').innerText()).trim() !== '0/0' && (await page.locator('.exam-review-points').first().innerText()).includes('AI setup needed'), 'Productive results show the actionable AI state instead of zero points or a primary self-review label');
+    const guestStored = await restoreLegacyResult(exam.id);
+    const guestRestored = await localResult(exam.id);
+    ok(guestRestored.state.attemptId === guestStored.state.attemptId && guestRestored.state.answers[item.id] === responseText && await page.locator('#result-ai-status').getAttribute('data-ai-state') === 'setup', 'An existing device result reopens with the current AI status without clearing its answer or attempt');
+    ok(!(await page.locator('#exam-grading-note').innerText()).includes('require self-review and have no automatic score') && guestRestored.state.resultEnvelope.result.grading_note === guestStored.state.resultEnvelope.result.grading_note, 'A legacy server note cannot override current AI guidance and its original downloaded data remains intact');
+    await page.locator('#result-ai-action').click();
+    ok(await page.locator(`.exam-review-item[data-review-item="${item.id}"]`).getAttribute('open') !== null && await page.locator('#exam-result .ai-review-panel').isVisible() && await page.locator('#exam-result [data-ai-action]').isDisabled(), 'The guest result shortcut opens its real AI panel and sign-in explanation without requesting a review');
     const guest = await api(request(exam, item));
     ok(guest.status === 401 && guest.body.code === 'ai_login_required', 'HTTP rejects guest AI requests before provider processing');
     const method = await page.request.get(`${base}/api/ai-review.php`);
@@ -116,7 +168,11 @@ async function upload(buffer, mime = 'audio/wav') {
     const unconfigured = await api(request(exam, item));
     ok(unconfigured.status === 503 && unconfigured.body.code === 'ai_not_configured' && !('review' in unconfigured.body), 'Missing API setup returns a clear unavailable state and no invented score');
     await start(exam.id); await page.locator('.exam-writing-area').fill(responseText);
-    ok(await page.locator('[data-ai-action]').isDisabled() && (await page.locator('[data-ai-availability]').innerText()).includes('awaiting'), 'Signed-in learners see that AI still needs the owner’s API setup');
+    ok(await page.locator('#item-response [data-ai-action]').isDisabled() && (await page.locator('#item-response [data-ai-availability]').innerText()).includes('awaiting'), 'Signed-in learners see that AI still needs the owner’s API setup');
+    await finishCurrentPractice();
+    ok(await page.locator('#result-ai-status').getAttribute('data-ai-state') === 'setup' && /OpenAI|API setup/i.test(await page.locator('#result-ai-message').innerText()) && (await page.locator('.exam-review-points').first().innerText()).includes('AI setup needed'), 'Saved signed-in results identify missing API setup before the learner opens any answer');
+    await page.locator('#result-ai-action').click();
+    ok(await page.locator('#exam-result .ai-review-panel').isVisible() && await page.locator('#exam-result [data-ai-action]').isDisabled(), 'The setup-needed result shortcut exposes the disabled AI panel and retains the written response');
     const validUpload = await upload(wav());
     ok(validUpload.status === 503 && validUpload.body.code === 'ai_not_configured', 'A valid local WAV reaches configuration validation without any provider request');
     const maximumUpload = await upload(wav(300));
@@ -155,50 +211,88 @@ async function upload(buffer, mime = 'audio/wav') {
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, saved: true, cached: false, entry, usage: { remaining_today: 9, limit: 10, resets: '00:00 UTC' } }) });
     });
     await start(exam.id); await page.locator('.exam-writing-area').fill(responseText);
-    await page.locator('[data-ai-action]').click();
-    await page.locator('[data-ai-status]').filter({ hasText: 'temporarily unavailable' }).waitFor();
-    ok(await page.locator('.exam-writing-area').inputValue() === responseText && await page.locator('[data-ai-feedback]').isHidden(), 'A provider failure keeps the written answer and shows no score');
-    await page.locator('[data-ai-action]').click(); await page.locator('[data-ai-feedback]:not([hidden])').waitFor();
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'temporarily unavailable' }).waitFor();
+    ok(await page.locator('.exam-writing-area').inputValue() === responseText && await page.locator('#item-response [data-ai-feedback]').isHidden(), 'A provider failure keeps the written answer and shows no score');
+    await page.locator('#item-response [data-ai-action]').click(); await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
     ok(sent.length === 2 && sent[0].request_id === sent[1].request_id, 'Retry reuses the same review reference for unchanged work');
-    ok((await page.locator('[data-ai-feedback]').innerText()).includes('6.5 / 9') && await page.locator('.ai-review-criterion').count() === 1 && (await page.locator('[data-ai-feedback]').innerText()).includes('Your next practice steps'), 'AI feedback renders its estimate, rubric and actionable improvement plan');
-    ok(await page.locator('[data-ai-feedback] img, [data-ai-feedback] script').count() === 0 && await page.evaluate(() => window.__aiXss) === undefined, 'Model feedback and learning samples render as safe text');
+    ok((await page.locator('#item-response [data-ai-feedback]').innerText()).includes('6.5 / 9') && await page.locator('#item-response .ai-review-criterion').count() === 1 && (await page.locator('#item-response [data-ai-feedback]').innerText()).includes('Your next practice steps'), 'AI feedback renders its estimate, rubric and actionable improvement plan');
+    ok(await page.locator('#item-response [data-ai-feedback] img, #item-response [data-ai-feedback] script').count() === 0 && await page.evaluate(() => window.__aiXss) === undefined, 'Model feedback and learning samples render as safe text');
     const changed = responseText + ' Students can therefore plan their mornings more reliably.';
     await page.locator('.exam-writing-area').fill(changed);
-    ok(await page.locator('[data-ai-feedback]').isHidden(), 'Editing the written response hides feedback for the earlier answer');
-    holdResponse = true; await page.locator('[data-ai-action]').click();
-    await page.waitForFunction(() => document.querySelector('.ai-review-panel').getAttribute('aria-busy') === 'true');
+    ok(await page.locator('#item-response [data-ai-feedback]').isHidden(), 'Editing the written response hides feedback for the earlier answer');
+    holdResponse = true; await page.locator('#item-response [data-ai-action]').click();
+    await page.waitForFunction(() => document.querySelector('#item-response .ai-review-panel').getAttribute('aria-busy') === 'true');
     for (let count = 0; !holdResolve && count < 100; ++count) await new Promise(resolve => setTimeout(resolve, 20));
     assert(holdResolve, 'The held request must reach the route');
     await page.locator('.exam-writing-area').fill(changed + ' A further edit during review.');
     holdResolve(); holdResponse = false;
-    await page.locator('[data-ai-status]').filter({ hasText: 'changed while' }).waitFor();
-    ok(await page.locator('[data-ai-feedback]').isHidden() && sent[2].request_id !== sent[1].request_id, 'Late feedback stays attached to its original answer and changed work gets a new request reference');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'changed while' }).waitFor();
+    ok(await page.locator('#item-response [data-ai-feedback]').isHidden() && sent[2].request_id !== sent[1].request_id, 'Late feedback stays attached to its original answer and changed work gets a new request reference');
+    await finishCurrentPractice();
+    ok(await page.locator('#result-ai-status').getAttribute('data-ai-state') === 'ready' && (await page.locator('.exam-review-points').first().innerText()).includes('AI review available'), 'A configured saved result offers AI review for its unchanged, unreviewed writing response');
+    const callsBeforeResultJump = sent.length;
+    await page.locator('#result-ai-action').click();
+    ok(await page.locator(`.exam-review-item[data-review-item="${item.id}"]`).getAttribute('open') !== null && await page.locator('#exam-result [data-ai-action]').isVisible() && sent.length === callsBeforeResultJump, 'The result action opens the first productive answer without automatically sending it to a paid API');
+    holdResponse = true; holdResolve = null;
+    await page.locator('#exam-result [data-ai-action]').click();
+    await page.waitForFunction(() => document.querySelector('#result-ai-status').dataset.aiState === 'reviewing');
+    for (let count = 0; !holdResolve && count < 100; ++count) await new Promise(resolve => setTimeout(resolve, 20));
+    assert(holdResolve, 'The result review must reach its explicit browser fixture');
+    ok((await page.locator('.exam-review-points').first().innerText()).includes('Reviewing') && (await page.locator('#exam-result-sections').innerText()).includes('Reviewing'), 'A requested review updates the result summary, section and task to a pending state');
+    holdResolve(); holdResponse = false;
+    await page.waitForFunction(() => document.querySelector('#result-ai-status').dataset.aiState === 'reviewed');
+    ok(/AI\s+6\.5\s*\/\s*9/.test(await page.locator('.exam-review-points').first().innerText()) && /AI reviewed|AI feedback ready/i.test(await page.locator('#exam-result-sections').innerText()), 'Successful coaching updates the task estimate and section status without blending it into objective points');
+    const reviewedResult = await localResult(exam.id);
+    ok(reviewedResult.state.resultEnvelope.result.objective_total === 0 && reviewedResult.state.resultEnvelope.result.objective_score === 0 && reviewedResult.state.aiReviews.length > 0, 'AI coaching persists alongside the result while objective raw points remain unchanged');
+    const callsBeforeResultRestore = sent.length;
+    await page.reload(); await page.locator('#exam-result:not([hidden])').waitFor();
+    ok(await page.locator('#result-ai-status').getAttribute('data-ai-state') === 'reviewed' && /AI\s+6\.5\s*\/\s*9/.test(await page.locator('.exam-review-points').first().innerText()) && sent.length === callsBeforeResultRestore, 'A completed AI result restores its saved estimate without another provider call');
+    await start(pteWriting.id);
+    const pteItems = pteWriting.sections.flatMap(section => section.items);
+    assert.equal(pteItems.length, 2, 'The screenshot regression requires both real PTE written-summary tasks');
+    await page.locator('.exam-writing-area').fill(responseText);
+    await page.locator('#next-item').click();
+    await page.locator('.exam-writing-area').fill(responseText + ' This is a separate answer to the second task.');
+    await finishCurrentPractice();
+    await page.locator('#result-ai-action').click();
+    const firstPteRow = page.locator(`.exam-review-item[data-review-item="${pteItems[0].id}"]`);
+    const secondPteRow = page.locator(`.exam-review-item[data-review-item="${pteItems[1].id}"]`);
+    await firstPteRow.locator('[data-ai-action]').click();
+    await page.waitForFunction(() => document.querySelector('#result-ai-status').dataset.aiState === 'partial');
+    ok(/AI\s+65%/.test(await firstPteRow.locator('.exam-review-points').innerText()) && (await secondPteRow.locator('.exam-review-points').innerText()).includes('AI review available'), 'Two-task PTE results show each task’s own practice percentage and keep the remaining answer available for review');
+    const callsBeforeNextAnswer = sent.length;
+    await page.locator('#result-ai-action').click();
+    ok(await secondPteRow.getAttribute('open') !== null && await secondPteRow.locator('[data-ai-action]').isVisible() && sent.length === callsBeforeNextAnswer, 'The result shortcut advances to the first pending answer rather than repeating a reviewed task');
+    await secondPteRow.locator('[data-ai-action]').click();
+    await page.waitForFunction(() => document.querySelector('#result-ai-status').dataset.aiState === 'reviewed');
+    ok(/AI\s+65%/.test(await secondPteRow.locator('.exam-review-points').innerText()) && (await localResult(pteWriting.id)).state.resultEnvelope.result.objective_total === 0, 'Both PTE written-summary tasks receive separate coaching percentages while no objective or official score is invented');
     await start(config.sessions.spoken.exam.id);
     await page.locator('.exam-speaking-notes').fill('I want to speak more clearly next time.');
-    ok(await page.locator('[data-ai-action]').isDisabled(), 'Speaking reflections alone cannot trigger an AI language review');
-    await page.locator('[data-ai-transcript]').fill('Reliable public transport helps me reach my classes on time.');
-    await page.locator('[data-ai-action]').click(); await page.locator('[data-ai-feedback]:not([hidden])').waitFor();
+    ok(await page.locator('#item-response [data-ai-action]').isDisabled(), 'Speaking reflections alone cannot trigger an AI language review');
+    await page.locator('#item-response [data-ai-transcript]').fill('Reliable public transport helps me reach my classes on time.');
+    await page.locator('#item-response [data-ai-action]').click(); await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
     const spokenSent = sent.at(-1);
     ok(spokenSent.transcript === 'Reliable public transport helps me reach my classes on time.' && spokenSent.response === 'I want to speak more clearly next time.', 'Spoken transcript and reflection notes remain separate in the API request');
-    ok((await page.locator('[data-ai-feedback]').innerText()).includes('70%') && (await page.locator('.ai-review-disclosure').innerText()).includes('pronunciation, fluency and delivery are not assessed'), 'Speaking feedback labels its content/language percentage and acoustic limits');
-    await page.locator('[data-ai-transcript]').fill('A changed transcript requires a separate review.');
-    ok(await page.locator('[data-ai-feedback]').isHidden(), 'Changing the spoken transcript hides coaching for the earlier source');
-    await page.locator('[data-ai-source]').selectOption('file');
-    await page.locator('[data-ai-file]').setInputFiles({ name: 'student-recording.wav', mimeType: 'audio/wav', buffer: wav() });
-    await page.locator('[data-ai-action]').click(); await page.locator('[data-ai-feedback]:not([hidden])').waitFor();
+    ok((await page.locator('#item-response [data-ai-feedback]').innerText()).includes('70%') && (await page.locator('#item-response .ai-review-disclosure').innerText()).includes('pronunciation, fluency and delivery are not assessed'), 'Speaking feedback labels its content/language percentage and acoustic limits');
+    await page.locator('#item-response [data-ai-transcript]').fill('A changed transcript requires a separate review.');
+    ok(await page.locator('#item-response [data-ai-feedback]').isHidden(), 'Changing the spoken transcript hides coaching for the earlier source');
+    await page.locator('#item-response [data-ai-source]').selectOption('file');
+    await page.locator('#item-response [data-ai-file]').setInputFiles({ name: 'student-recording.wav', mimeType: 'audio/wav', buffer: wav() });
+    await page.locator('#item-response [data-ai-action]').click(); await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
     const converted = audioSent.at(-1);
     ok(audioSent.length === 1 && converted.filename === 'response.wav' && converted.mime === 'audio/wav' && converted.bytes.toString('ascii', 0, 4) === 'RIFF' && converted.bytes.readUInt32LE(24) === 16000 && converted.bytes.readUInt16LE(22) === 1 && converted.bytes.readUInt16LE(34) === 16, 'The real browser audio pipeline converts an uploaded clip to bounded 16 kHz mono PCM WAV');
-    await page.locator('.ai-review-transcript-result summary').click();
-    ok(await page.locator('.ai-review-transcript-result p').isVisible() && await page.locator('.ai-review-transcript-result p').textContent() === 'Reliable public transport helps me reach my classes on time.', 'Audio feedback persists visibly with the actual transcript supplied by transcription');
+    await page.locator('#item-response .ai-review-transcript-result summary').click();
+    ok(await page.locator('#item-response .ai-review-transcript-result p').isVisible() && await page.locator('#item-response .ai-review-transcript-result p').textContent() === 'Reliable public transport helps me reach my classes on time.', 'Audio feedback persists visibly with the actual transcript supplied by transcription');
     const callsBeforeBadAudio = sent.length;
-    await page.locator('[data-ai-file]').setInputFiles({ name: 'corrupt-recording.wav', mimeType: 'audio/wav', buffer: Buffer.from('not-real-audio'.repeat(30)) });
-    ok(await page.locator('[data-ai-feedback]').isHidden(), 'Selecting a new recording hides feedback for the previous recording');
-    await page.locator('[data-ai-action]').click();
-    await page.locator('[data-ai-status]').filter({ hasText: 'could not decode' }).waitFor();
+    await page.locator('#item-response [data-ai-file]').setInputFiles({ name: 'corrupt-recording.wav', mimeType: 'audio/wav', buffer: Buffer.from('not-real-audio'.repeat(30)) });
+    ok(await page.locator('#item-response [data-ai-feedback]').isHidden(), 'Selecting a new recording hides feedback for the previous recording');
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'could not decode' }).waitFor();
     ok(sent.length === callsBeforeBadAudio, 'Undecodable recordings fail locally before any transcription or provider request');
-    await page.locator('[data-ai-file]').setInputFiles({ name: 'too-short.wav', mimeType: 'audio/wav', buffer: wav(0.25) });
-    await page.locator('[data-ai-action]').click();
-    await page.locator('[data-ai-status]').filter({ hasText: 'half a second' }).waitFor();
+    await page.locator('#item-response [data-ai-file]').setInputFiles({ name: 'too-short.wav', mimeType: 'audio/wav', buffer: wav(0.25) });
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'half a second' }).waitFor();
     ok(sent.length === callsBeforeBadAudio, 'Clips shorter than half a second fail before provider upload');
     await page.setViewportSize({ width: 390, height: 844 });
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'AI review remains usable without page overflow at a mobile width');
@@ -234,6 +328,21 @@ nisha_ai_submit($user,$payload,null,static fn()=>['status'=>200,'body'=>json_enc
     try {
         const guestPage = await guestContext.newPage(); await guestPage.goto(`${base}/ai-reviews.php`);
         ok(new URL(guestPage.url()).pathname === '/login.php' && await guestPage.locator('.ai-history-review').count() === 0, 'Saved coaching history requires the student’s authenticated session');
+        await enableUiFixture(guestContext);
+        let guestReviewCalls = 0;
+        guestPage.on('request', request => { if (new URL(request.url()).pathname === '/api/ai-review.php') guestReviewCalls++; });
+        await guestPage.goto(`${base}/exams.php?exam=${encodeURIComponent(exam.id)}&start=1`);
+        await guestPage.locator('#exam-setup-dialog').waitFor({ state: 'visible' });
+        await guestPage.locator('#ready-confirmed').check();
+        await guestPage.locator('#begin-exam').click();
+        await guestPage.locator('.exam-writing-area').fill(responseText);
+        await guestPage.locator('#submit-exam-early').click();
+        await guestPage.locator('#exam-confirm-dialog[open]').waitFor();
+        await guestPage.locator('#exam-confirm-yes').click();
+        await guestPage.locator('#exam-result:not([hidden])').waitFor();
+        ok(await guestPage.locator('#result-ai-status').getAttribute('data-ai-state') === 'guest' && (await guestPage.locator('.exam-review-points').innerText()).includes('Sign in for AI review') && await guestPage.locator('#result-ai-sign-in').isVisible(), 'A configured website identifies the guest account requirement rather than claiming AI setup is missing');
+        await guestPage.locator('#result-ai-action').click();
+        ok(await guestPage.locator('#exam-result .ai-review-panel').isVisible() && await guestPage.locator('#exam-result [data-ai-action]').isDisabled() && guestReviewCalls === 0, 'Configured guest results expose the sign-in panel without automatically sending their answer to OpenAI');
     } finally { await guestContext.close(); }
     ok(errors.length === 0 && external.length === 0 && !/Fatal error|Uncaught/.test(serverErrors), 'Browser and HTTP flows finish without script/server failures or external requests');
     console.log(`PASS: ${checks} AI HTTP/browser checks. Provider UI responses were explicitly intercepted; no paid calls.`);

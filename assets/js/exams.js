@@ -23,6 +23,7 @@
     let storageWarning = '';
     let currentEnvelope = null;
     let currentReview = [];
+    const resultAIActivity = new Map();
     let audioResourceId = null;
     let audioGeneration = 0;
     let cueContext = null;
@@ -1018,8 +1019,14 @@
                 memory.aiDrafts[question.id] = updatedDraft;
                 const uniqueEntries = new Map([...(memory.aiReviews || []), ...updatedEntries].map((entry) => [entry.id, entry]));
                 memory.aiReviews = [...uniqueEntries.values()];
-                if (matchingState && state === attemptState) saveState();
                 if (resultReview && currentEnvelope?.result.attempt_id === attemptId) currentEnvelope.ai_reviews = memory.aiReviews;
+                if (matchingState && state === attemptState) saveState();
+                if (resultReview && currentEnvelope?.result.attempt_id === attemptId) updateResultAIStatus();
+            },
+            onStatus: (status) => {
+                if (!resultReview || currentEnvelope?.result.attempt_id !== attemptId) return;
+                resultAIActivity.set(question.id, status);
+                updateResultAIStatus();
             },
         });
     }
@@ -1233,7 +1240,7 @@
             state.resultEnvelope = envelope;
             saveState();
             showResults(envelope);
-            announce('Your full mock review is ready. Objective practice points and self-review guidance are available.');
+            announce('Your answer review is ready. Objective points and AI review options are available.');
         } catch (error) {
             if (state?.attemptId === attemptId) {
                 $('submission-message').textContent = `${error.name === 'AbortError' ? 'The connection timed out. The server may still have received your attempt; retrying uses the same attempt ID.' : error.message} Your finished responses are retained. Retry submission or download a copy below.`;
@@ -1284,6 +1291,7 @@
         stopAudio();
         stopRecording(false);
         const result = envelope.result;
+        if (currentEnvelope?.result.attempt_id !== result.attempt_id) resultAIActivity.clear();
         currentEnvelope = envelope;
         currentReview = result.review || [];
         exam = exams[result.exam_id] || null;
@@ -1296,27 +1304,116 @@
         $('exam-result-points').nextElementSibling.textContent = result.objective_total ? 'OBJECTIVE PRACTICE POINTS' : 'WRITING & SPEAKING PRACTICE';
         $('exam-result-points').replaceChildren(...score.childNodes);
         $('exam-result-name').textContent = result.name;
-        $('exam-result-summary').textContent = `${result.answered_items} of ${result.total_items} tasks have a text response · ${formatTime(result.elapsed_seconds)} elapsed. ${result.incomplete ? 'This attempt is incomplete: not all sections were finished. ' : ''}Writing and speaking offer separate AI practice estimates and improvement guidance, alongside self-review.`;
+        $('exam-result-summary').textContent = `${result.answered_items} of ${result.total_items} tasks have a text response · ${formatTime(result.elapsed_seconds)} elapsed. ${result.incomplete ? 'This attempt is incomplete: not all sections were finished. ' : ''}Writing and speaking use separate AI practice estimates and improvement guidance. Open the AI review below to request your score.`;
         $('retry-save-result').hidden = !(config.signedIn && !envelope.saved && state && state.attemptId === result.attempt_id);
         $('exam-result-save').replaceChildren();
         $('exam-result-save').append(el('strong', '', envelope.saved ? 'Your account result is saved.' : 'This result is not saved to an account.'), el('p', '', envelope.save_message || (envelope.saved ? 'Find it again from your dashboard.' : 'Download a copy to keep your review.')));
         if (!config.signedIn) { const link = el('a', 'exam-text-button', 'Create an account for future saved results →'); link.href = 'register.php'; $('exam-result-save').append(link); }
         $('exam-result-sections').replaceChildren(...result.sections.map((part) => {
             const card = el('article'); card.append(el('h2', '', part.title));
-            card.append(el('strong', '', part.total > 0 ? `${part.score} / ${part.total}` : 'AI / self-review'));
-            card.append(el('p', '', `${part.answered} of ${part.total_items} text responses${part.ungraded_items ? ` · ${part.ungraded_items} ungraded` : ''}`));
+            card.dataset.sectionId = part.id;
+            const points = el('strong', '', part.total > 0 ? `${part.score} / ${part.total}` : 'AI review pending');
+            points.dataset.sectionPoints = 'true'; card.append(points);
+            const aiStatus = el('p', 'exam-section-ai-status'); aiStatus.dataset.sectionAiStatus = 'true'; aiStatus.hidden = true; card.append(aiStatus);
+            card.append(el('p', '', `${part.answered} of ${part.total_items} text responses${part.ungraded_items ? ` · ${part.ungraded_items} writing/speaking tasks` : ''}`));
             if (!(result.completed_sections || []).includes(part.id)) card.append(el('span', 'exam-incomplete-label', 'Section not completed'));
             return card;
         }));
-        $('exam-grading-note').textContent = result.grading_note || 'Raw practice points only. AI coaching provides separate writing and speaking practice estimates; no official exam score is generated.';
+        // Older saved reports can contain outdated self-review-only wording.
+        // Keep their original JSON, while explaining the current review options.
+        $('exam-grading-note').textContent = 'Reading/listening points and AI writing/speaking estimates are shown separately. Request an AI review to receive a practice estimate and improvement advice. These are not official IELTS/PTE results.';
         const select = $('review-section'); select.replaceChildren(Object.assign(el('option', '', 'All sections'), { value: '' }));
         result.sections.forEach((part) => select.append(Object.assign(el('option', '', part.title), { value: part.id })));
         renderReview();
+        updateResultAIStatus();
         renderLocalRecordings();
         $('clear-result-device').hidden = !state || state.attemptId !== result.attempt_id;
         $('start-new-attempt').hidden = !exam;
         $('result-title').focus();
         window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resultAIEntry(review) {
+        if (!currentEnvelope?.result) return null;
+        const result = currentEnvelope.result;
+        const candidates = [
+            ...(Array.isArray(state?.aiReviews) ? state.aiReviews : []),
+            ...(Array.isArray(currentEnvelope.aiReviews) ? currentEnvelope.aiReviews : []),
+            ...(Array.isArray(currentEnvelope.ai_reviews) ? currentEnvelope.ai_reviews : []),
+        ];
+        return candidates.filter((entry) => entry?.review && entry.exam_id === result.exam_id && entry.exam_version === result.exam_version
+            && entry.attempt_id === result.attempt_id && entry.item_id === review.id && entry.response === review.response)
+            .sort((a, b) => Number(b.id) - Number(a.id))[0] || null;
+    }
+
+    function aiResultLabel(review) {
+        const entry = resultAIEntry(review);
+        if (entry) {
+            const score = entry.review.score;
+            return score && typeof score.value === 'number' && Number.isFinite(score.value)
+                ? `AI ${score.value}${score.unit === '%' ? '%' : ` / ${score.max}`}` : 'AI feedback ready';
+        }
+        if (resultAIActivity.get(review.id) === 'reviewing') return 'Reviewing with AI…';
+        if (resultAIActivity.get(review.id) === 'error') return 'AI review needs retry';
+        if (!config.aiReview?.configured) return 'AI setup needed';
+        if (!config.signedIn) return 'Sign in for AI review';
+        if (!config.aiReview?.transportAvailable) return 'AI review unavailable';
+        if (!currentEnvelope.saved && currentEnvelope.result.session_type !== 'practice') return 'Save for AI review';
+        return 'AI review available';
+    }
+
+    function updateResultAIStatus() {
+        if (!currentEnvelope?.result) return;
+        const productive = currentReview.filter((review) => ['essay', 'spoken'].includes(review.type));
+        const banner = $('result-ai-status'); banner.hidden = !productive.length;
+        if (!productive.length) return;
+        const reviewed = productive.filter((review) => resultAIEntry(review));
+        const waiting = productive.filter((review) => !resultAIEntry(review));
+        const reviewing = waiting.some((review) => resultAIActivity.get(review.id) === 'reviewing');
+        const count = `${reviewed.length} of ${productive.length} answers have AI feedback.`;
+        let status = 'ready'; let heading = 'Your answers are ready for AI scoring.';
+        let message = `${count} Open an answer below and choose “Review with AI” for a practice estimate and improvement advice. Submitting this test did not call OpenAI.`;
+        if (!waiting.length) { status = 'reviewed'; heading = 'Your AI feedback is ready.'; message = `${count} Open each answer to see its estimate, criterion feedback and improvement plan. Estimates use the scale shown for that task.`; }
+        else if (reviewing) { status = 'reviewing'; heading = 'Your AI review is in progress.'; message = `${count} Keep this page open. Your answers are retained while feedback is prepared.`; }
+        else if (waiting.some((review) => resultAIActivity.get(review.id) === 'error')) { status = 'error'; heading = 'Your AI review could not finish.'; message = `${count} Your answers are retained. Open the review to see the error and retry; no score has been invented.`; }
+        else if (!config.aiReview?.configured) { status = 'setup'; heading = 'AI scoring needs to be enabled.'; message = `${count} This website’s OpenAI API setup is not complete. Your answers are retained. The site owner needs to enable AI reviews${config.signedIn ? '.' : '; you will also need to sign in to request one.'}`; }
+        else if (!config.signedIn) { status = 'guest'; heading = 'Sign in to get an AI score.'; message = `${count} This was a guest attempt. Sign in before taking an activity to request and save AI feedback. Download your responses before leaving this page.`; }
+        else if (!config.aiReview.transportAvailable) { status = 'unavailable'; heading = 'AI scoring is temporarily unavailable.'; message = `${count} Your answers are retained. The site owner needs to restore the AI connection.`; }
+        else if (!currentEnvelope.saved && currentEnvelope.result.session_type !== 'practice') { status = 'save'; heading = 'Save this result to request AI scoring.'; message = `${count} Choose “Retry saving to account”, then open a writing or speaking answer for AI feedback.`; }
+        else if (reviewed.length) { status = 'partial'; heading = 'Continue your AI reviews.'; }
+        banner.dataset.aiState = status;
+        if ($('result-ai-heading').textContent !== heading) $('result-ai-heading').textContent = heading;
+        if ($('result-ai-message').textContent !== message) $('result-ai-message').textContent = message;
+        $('result-ai-action').textContent = !waiting.length ? 'View AI feedback →' : 'Open AI review →';
+        $('result-ai-sign-in').hidden = Boolean(config.signedIn);
+        document.querySelectorAll('.exam-review-item[data-review-item]').forEach((details) => {
+            const review = productive.find((entry) => entry.id === details.dataset.reviewItem);
+            if (review) details.querySelector('.exam-review-points').textContent = aiResultLabel(review);
+        });
+        document.querySelectorAll('[data-section-id]').forEach((card) => {
+            const sectionItems = productive.filter((review) => review.section_id === card.dataset.sectionId);
+            if (!sectionItems.length) return;
+            const complete = sectionItems.filter((review) => resultAIEntry(review)).length;
+            const part = currentEnvelope.result.sections.find((entry) => entry.id === card.dataset.sectionId);
+            const summary = complete === sectionItems.length ? 'AI reviewed' : complete ? `${complete} / ${sectionItems.length} AI reviewed` : aiResultLabel(sectionItems[0]);
+            if (!part?.total) card.querySelector('[data-section-points]').textContent = summary;
+            const note = card.querySelector('[data-section-ai-status]'); note.hidden = false; note.textContent = `${complete} of ${sectionItems.length} AI reviews completed`;
+        });
+    }
+
+    function openResultAIReview() {
+        const productive = currentReview.filter((review) => ['essay', 'spoken'].includes(review.type));
+        const target = productive.find((review) => !resultAIEntry(review)) || productive[0];
+        if (!target) return;
+        let details = [...document.querySelectorAll('.exam-review-item')].find((entry) => entry.dataset.reviewItem === target.id);
+        if (!details) { $('review-section').value = ''; renderReview(); details = [...document.querySelectorAll('.exam-review-item')].find((entry) => entry.dataset.reviewItem === target.id); }
+        if (!details) return;
+        details.open = true;
+        const panel = details.querySelector('.ai-review-panel') || details;
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        const focus = panel.querySelector('[data-ai-action]:not(:disabled), a') || panel;
+        if (!focus.hasAttribute('tabindex') && !focus.matches('button,a')) focus.tabIndex = -1;
+        focus.focus({ preventScroll: true });
     }
 
     function answerText(question, response) {
@@ -1340,14 +1437,15 @@
         $('exam-answer-review').replaceChildren(...currentReview.filter((review) => !filter || review.section_id === filter).map((review) => {
             const question = review.item_snapshot || (review.options || review.text ? review : questionMap.get(review.id));
             const details = el('details', `exam-review-item ${review.graded && review.score < review.max_score ? 'needs-review' : ''}`);
+            details.dataset.reviewItem = review.id;
             const summary = el('summary');
             const title = el('span'); title.append(el('small', '', `${review.id} · ${review.task_type}`), el('strong', '', review.prompt));
-            summary.append(title, el('span', 'exam-review-points', review.graded ? `${review.score} / ${review.max_score}` : 'Self-review'));
+            summary.append(title, el('span', 'exam-review-points', review.graded ? `${review.score} / ${review.max_score}` : aiResultLabel(review)));
             const body = el('div', 'exam-review-body');
             body.append(el('h3', '', review.type === 'spoken' ? 'Your reflection notes' : 'Your response'), el('p', 'exam-review-response', answerText(question, review.response)));
             if (review.graded) body.append(el('h3', '', 'Accepted answer / correct order'), el('p', 'exam-review-answer', answerText(question, review.correct_answer)));
             if (review.correct_text) body.append(el('h3', '', 'Correct transcript'), el('p', '', review.correct_text));
-            body.append(el('p', 'exam-review-explanation', review.explanation));
+            body.append(el('p', 'exam-review-explanation', review.graded ? review.explanation : 'Open the AI coach below for a practice estimate and improvement advice. The checklist is also available to help you prepare your next response.'));
             if (Array.isArray(review.rubric) && review.rubric.length) {
                 body.append(el('h3', '', 'Your self-review checklist'));
                 const list = el('ul'); review.rubric.forEach((point) => list.append(el('li', '', point))); body.append(list);
@@ -1467,6 +1565,7 @@
     $('print-exam-result').addEventListener('click', () => window.print());
     $('retry-save-result').addEventListener('click', retryAccountSave);
     $('review-section').addEventListener('change', renderReview);
+    $('result-ai-action').addEventListener('click', openResultAIReview);
     $('start-new-attempt').addEventListener('click', async () => {
         if (!exam) return;
         if (await confirm('Make space for a fresh attempt?', 'A new attempt replaces this mock’s saved device copy and removes recordings from this tab. Download your result and recordings first. Account results remain saved.', 'Prepare new attempt', 'Keep result')) {

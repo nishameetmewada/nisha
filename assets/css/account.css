@@ -13,6 +13,8 @@
 .auth-note p{margin:0}
 .auth-note strong{display:block;color:#253a2b;font-size:16px;margin-bottom:4px}
 .auth-card{background:#fff;border:1px solid #e6e8df;border-radius:20px;box-shadow:0 14px 54px #27352507;padding:39px 38px}
+.auth-card form{display:block;width:100%}
+.auth-card .form-field input{display:block;min-height:50px;border-width:2px}
 .auth-card h2{margin:0 0 10px;color:#212c28;font-size:30px;line-height:1.2;letter-spacing:-.045em;font-weight:600}
 .auth-card .form-intro{font-size:16px;line-height:1.8;color:#7a8076;margin:0 0 27px}
 .form-field{display:flex;flex-direction:column;gap:8px;margin-bottom:19px}
@@ -99,3 +101,5 @@
 @media(max-width:900px){.auth-shell{gap:35px;padding-top:50px;padding-bottom:65px}.auth-card{padding:30px 27px}.auth-story h1{font-size:49px}.dashboard-main{grid-template-columns:1fr}.practice-paths{grid-template-columns:repeat(2,minmax(0,1fr))}.account-banner{height:100%;box-sizing:border-box}.account-intro{align-items:flex-start}.account-actions{justify-content:flex-end;max-width:200px}}
 @media(max-width:680px){.auth-shell{grid-template-columns:1fr;gap:25px;padding:36px 20px 56px}.auth-story{max-width:none;padding:0}.auth-story h1{font-size:40px;max-width:440px;margin:18px 0}.auth-lead{font-size:16px;line-height:1.8}.auth-points{display:none}.auth-note{display:none}.auth-card{max-width:none;padding:29px 24px;border-radius:15px}.auth-card h2{font-size:27px}.auth-card .form-intro{margin-bottom:24px}.account-page{padding:34px 18px 60px}.account-intro{flex-direction:column;gap:19px;margin-bottom:27px}.account-intro h1{font-size:35px}.account-intro p{font-size:16px}.account-actions{max-width:none;justify-content:flex-start}.dashboard-grid{gap:10px;margin-bottom:22px}.stat-card{padding:17px 15px;min-height:146px;border-radius:10px}.stat-label{font-size:14px}.stat-value{font-size:29px;margin:12px 0 6px}.stat-helper{font-size:13px;line-height:1.65}.dashboard-panel{padding:22px 19px}.panel-heading h2{font-size:18px}.practice-paths{gap:11px}.practice-path-card{padding:17px 14px;min-height:220px}.practice-path-card h3{font-size:19px}.practice-path-card p{font-size:14px}.practice-path-card>a{font-size:14px}.dashboard-main{gap:0}.dashboard-main>aside{display:block}.dashboard-main>aside .dashboard-panel{margin-bottom:22px}.account-banner{padding:25px}.attempts-table{font-size:14px}.attempts-table td,.attempts-table th{padding-left:6px;padding-right:6px}}
 @media(prefers-reduced-motion:reduce){.form-field input,.form-field select{transition:none}}
+/* Keep the account fields in the first screen on phones and narrow tablets. */
+@media(max-width:680px){.auth-card{grid-row:1}.auth-story{grid-row:2}.auth-shell{padding-top:24px}.auth-card{padding:25px 20px}}

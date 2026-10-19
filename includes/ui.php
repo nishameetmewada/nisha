@@ -1,4 +1,36 @@
 <?php
+/** Give local CSS and JavaScript a new URL whenever their contents change. */
+function nisha_asset_url(string $url): string
+{
+    $fragmentAt = strpos($url, '#');
+    $fragment = $fragmentAt === false ? '' : substr($url, $fragmentAt);
+    $withoutFragment = $fragmentAt === false ? $url : substr($url, 0, $fragmentAt);
+    $queryAt = strpos($withoutFragment, '?');
+    $path = $queryAt === false ? $withoutFragment : substr($withoutFragment, 0, $queryAt);
+    $query = $queryAt === false ? '' : substr($withoutFragment, $queryAt + 1);
+
+    // Only resolve the application's own assets, never URLs or arbitrary files.
+    if (!preg_match('~\Aassets/[A-Za-z0-9_./-]+\.(?:css|js)\z~D', $path)
+        || in_array('..', explode('/', $path), true)) {
+        return $url;
+    }
+    $file = dirname(__DIR__) . '/' . $path;
+    if (!is_file($file) || !is_readable($file)) {
+        return $url;
+    }
+    $hash = @hash_file('sha256', $file);
+    if ($hash === false) {
+        return $url;
+    }
+
+    // Keep other parameters intact and replace an existing version if present.
+    $parameters = array_filter(explode('&', $query), static function (string $parameter): bool {
+        return $parameter !== '' && rawurldecode(explode('=', $parameter, 2)[0]) !== 'v';
+    });
+    $parameters[] = 'v=' . substr($hash, 0, 16);
+    return $path . '?' . implode('&', $parameters) . $fragment;
+}
+
 /** Small, dependency-free icon set used throughout the interface. */
 function icon(string $name, string $class = '', int $size = 20): string
 {

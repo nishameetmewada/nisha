@@ -208,7 +208,7 @@
         }
         action.addEventListener('click', async () => {
             if (busy || action.disabled) return;
-            busy = true; errorMessage = ''; refresh();
+            busy = true; errorMessage = ''; refresh(); options.onStatus?.('reviewing');
             const controller = new AbortController();
             const timeout = window.setTimeout(() => controller.abort(), 115000);
             try {
@@ -248,7 +248,7 @@
             } catch (error) {
                 errorMessage = error.name === 'AbortError' ? 'The AI review timed out. Your response and review reference are retained; retry to check for completed feedback.' : error.message;
                 status.textContent = errorMessage;
-            } finally { window.clearTimeout(timeout); busy = false; refresh(); }
+            } finally { window.clearTimeout(timeout); busy = false; refresh(); options.onStatus?.(errorMessage ? 'error' : 'ready'); }
         });
         const controller = { refresh, addEntries: (entries) => { mountedEntries = [...mountedEntries, ...(entries || [])]; refresh(); } };
         panels.set(panel, controller); refresh(); return panel;

@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf()) {
         $error = 'Your session expired. Please try again.';
     } elseif (!$ready) {
-        $error = 'Student accounts are being set up. Free practice is available now.';
+        $error = 'Sign-in is temporarily unavailable. Please try again later. Free practice is available now.';
     } elseif (time() < (int) ($_SESSION['login_blocked_until'] ?? 0)) {
         $error = 'Please wait a moment before trying to sign in again.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || strlen($email) > 254 || $password === '' || strlen($password) > 72) {
@@ -68,23 +68,23 @@ require __DIR__ . '/includes/header.php';
     </section>
     <section class="auth-card" aria-labelledby="login-heading">
         <span class="eyebrow">WELCOME BACK</span>
-        <h2 id="login-heading">Let’s keep going.</h2>
-        <p class="form-intro">Sign in to pick up where you left off.</p>
+        <h2 id="login-heading">Sign in to NISHA</h2>
+        <p class="form-intro">Enter your email address and password to pick up where you left off.</p>
         <?php if (!$ready): ?>
-            <div class="setup-notice" role="status">Student accounts are being set up. You can <a href="practice.php">explore free practice</a> while we get ready.</div>
+            <div class="setup-notice" role="status">Sign-in is temporarily unavailable. Please try again later, or <a href="practice.php">explore free practice</a>.</div>
         <?php endif; ?>
         <?php if ($error !== ''): ?><div class="form-error" role="alert"><?= e($error) ?></div><?php endif; ?>
         <form method="post" action="login.php">
             <?= csrf_field() ?>
             <div class="form-field">
                 <label for="email">Email address</label>
-                <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" value="<?= e($email) ?>" maxlength="254" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" value="<?= e($email) ?>" maxlength="254" required>
             </div>
             <div class="form-field">
                 <label for="password">Password</label>
-                <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="password" id="password" name="password" autocomplete="current-password" placeholder="Enter your password" required>
             </div>
-            <button class="btn btn-primary form-submit" type="submit" <?= !$ready ? 'disabled' : '' ?>>Sign in <span aria-hidden="true">→</span></button>
+            <button class="btn btn-primary form-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
         </form>
         <p class="auth-switch">New to NISHA? <a href="register.php">Create an account</a></p>
     </section>

@@ -21,7 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf()) {
         $errors[] = 'Your session expired. Please try again.';
     } elseif (!$ready) {
-        $errors[] = 'Student accounts are being set up. Free practice is available now.';
+        $errors[] = 'Registration is temporarily unavailable. Your account has not been created. Please try again later.';
     } else {
         if ($nameLength < 2 || $nameLength > 100 || preg_match('/[\x00-\x1F\x7F]/', $name)) {
             $errors[] = 'Enter your name using 2–100 characters.';
@@ -74,10 +74,10 @@ require __DIR__ . '/includes/header.php';
     </section>
     <section class="auth-card" aria-labelledby="register-heading">
         <span class="eyebrow">LET’S GET STARTED</span>
-        <h2 id="register-heading">Make room for possibility.</h2>
-        <p class="form-intro">Create your free account. Start building confidence.</p>
+        <h2 id="register-heading">Create your account</h2>
+        <p class="form-intro">Enter your details below to start saving your practice results.</p>
         <?php if (!$ready): ?>
-            <div class="setup-notice" role="status">Student accounts are being set up. You can <a href="practice.php">explore free practice</a> while we get ready.</div>
+            <div class="setup-notice" role="status">Registration is temporarily unavailable. Please try again later, or <a href="practice.php">explore free practice</a>.</div>
         <?php endif; ?>
         <?php if ($errors !== []): ?>
             <div class="form-error" role="alert"><ul><?php foreach ($errors as $error): ?><li><?= e($error) ?></li><?php endforeach; ?></ul></div>
@@ -86,22 +86,22 @@ require __DIR__ . '/includes/header.php';
             <?= csrf_field() ?>
             <div class="form-field">
                 <label for="name">Your name</label>
-                <input type="text" id="name" name="name" autocomplete="name" placeholder="Your full name" value="<?= e($name) ?>" minlength="2" maxlength="100" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="text" id="name" name="name" autocomplete="name" placeholder="Your full name" value="<?= e($name) ?>" minlength="2" maxlength="100" required>
             </div>
             <div class="form-field">
                 <label for="email">Email address</label>
-                <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" value="<?= e($email) ?>" maxlength="254" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="email" id="email" name="email" autocomplete="email" placeholder="you@example.com" value="<?= e($email) ?>" maxlength="254" required>
             </div>
             <div class="form-field">
                 <label for="password">Create a password</label>
-                <input type="password" id="password" name="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" aria-describedby="password-hint" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="password" id="password" name="password" autocomplete="new-password" placeholder="At least 8 characters" minlength="8" aria-describedby="password-hint" required>
                 <span class="form-hint" id="password-hint">At least 8 characters. Make it unique to your NISHA account.</span>
             </div>
             <div class="form-field">
                 <label for="password_confirmation">Confirm password</label>
-                <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" placeholder="Enter your password again" minlength="8" required <?= !$ready ? 'disabled' : '' ?>>
+                <input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" placeholder="Enter your password again" minlength="8" required>
             </div>
-            <button class="btn btn-primary form-submit" type="submit" <?= !$ready ? 'disabled' : '' ?>>Create my account <span aria-hidden="true">→</span></button>
+            <button class="btn btn-primary form-submit" type="submit">Create my account <span aria-hidden="true">→</span></button>
         </form>
         <p class="form-password-note">Your practice history is private to your account.</p>
         <p class="auth-switch">Already part of NISHA? <a href="login.php">Sign in</a></p>

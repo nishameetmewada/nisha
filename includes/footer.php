@@ -11,7 +11,7 @@
     <div class="container footer-bottom"><p>© <?= date('Y') ?> NISHA. Keep moving forward.</p><p>Independent practice platform. Not affiliated with IELTS or Pearson PTE.</p></div>
 </footer>
 <?php foreach ($extraScripts ?? [] as $script): ?>
-<script src="<?= e($script) ?>" defer></script>
+<script src="<?= e(nisha_asset_url($script)) ?>" defer></script>
 <?php endforeach; ?>
 </body>
 </html>

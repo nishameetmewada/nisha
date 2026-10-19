@@ -60,6 +60,14 @@ At this release, the pure suites pass 11,543 full-exam assertions and 7,936 libr
 
 Run `php tests/ai-review-integrity.php` for pure prompt/schema/scoring and PCM-WAV checks. Add `--database` to exercise real local persistence, ownership, idempotency, duplicate reservations and daily quotas using temporary accounts. It uses explicit CLI-only fake HTTP transports, never a paid API call. Its cleanup removes only its own accounts/counters and subtracts only its own global reservations. The complete suite currently passes 593 checks.
 
-Run `node tests/ai-review-browser-smoke.js` for the 38-check local HTTP/browser suite. It starts an isolated loopback PHP server and upload temporary directory. It tests actual auth/CSRF/unconfigured states, temp-file cleanup, browser PCM conversion and a five-minute upload, as well as feedback UI, retries, stale-answer handling, safe rendering and private saved history. Provider replies in UI tests are explicitly route mocked. No production test-mode environment variable or provider-URL override exists.
+Run `node tests/ai-review-browser-smoke.js` for the 57-check local HTTP/browser suite. It starts an isolated loopback PHP server and upload temporary directory. It tests actual auth/CSRF/unconfigured states, temp-file cleanup, browser PCM conversion and a five-minute upload, as well as feedback UI, retries, stale-answer handling, safe rendering and private saved history. Provider replies in UI tests are explicitly route mocked. No production test-mode environment variable or provider-URL override exists.
 
 The existing full and learning suites still pass 11,543 and 7,936 pure assertions plus 45 and 53 browser checks. Typography/theme validation covered light/dark preference, keyboard controls, persistence, system changes, accounts and responsive pages at 320/390/768/1440. A real API key is still needed to verify model availability, service/billing permissions, transcription quality and scoring accuracy; these tests do not establish those properties.
+
+## Cache and account regressions
+
+`php tests/asset-versioning.php` validates content-based JS/CSS URLs and actual shared header/footer output (28 checks). Every PHP page now uses versioned shared assets, so new deployments request current interface code even if old files were cached.
+
+`node tests/auth-browser-smoke.js` checks 24 local browser cases: visible editable inputs in both themes and phone/desktop layouts, genuine registration/login/logout, wrong-password rejection, private session isolation, and an isolated unavailable-database scenario. It cleans only its own test accounts. Missing hosting configuration must produce a clear error, never fake authentication or disabled/invisible fields.
+
+The AI browser suite also restores an old local result, preserves its responses/attempt/raw JSON, checks the visible AI setup/sign-in/ready/progress/completed status and explicit review shortcut, and reproduces the two-item PTE written-summary result without substituting an official PTE score.

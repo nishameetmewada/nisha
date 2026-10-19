@@ -15,17 +15,17 @@ $student = current_user();
     <meta name="description" content="<?= e($pageDescription) ?>">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
     <title><?= e($pageTitle) ?> — NISHA</title>
-    <script src="assets/js/theme-init.js"></script>
+    <script src="<?= e(nisha_asset_url('assets/js/theme-init.js')) ?>"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <link rel="preload" href="assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="<?= e(nisha_asset_url('assets/css/style.css')) ?>">
     <?php foreach ($extraStyles ?? [] as $stylesheet): ?>
-    <link rel="stylesheet" href="<?= e($stylesheet) ?>">
+    <link rel="stylesheet" href="<?= e(nisha_asset_url($stylesheet)) ?>">
     <?php endforeach; ?>
-    <link rel="stylesheet" href="assets/css/theme.css">
-    <script src="assets/js/theme.js" defer></script>
-    <script src="assets/js/site.js" defer></script>
+    <link rel="stylesheet" href="<?= e(nisha_asset_url('assets/css/theme.css')) ?>">
+    <script src="<?= e(nisha_asset_url('assets/js/theme.js')) ?>" defer></script>
+    <script src="<?= e(nisha_asset_url('assets/js/site.js')) ?>" defer></script>
 </head>
 <body class="page-<?= e($activePage) ?>">
 <a class="skip-link" href="#main">Skip to content</a>
