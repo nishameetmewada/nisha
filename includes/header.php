@@ -15,6 +15,7 @@ $student = current_user();
     <meta name="description" content="<?= e($pageDescription) ?>">
     <meta name="csrf-token" content="<?= e(csrf_token()) ?>">
     <title><?= e($pageTitle) ?> — NISHA</title>
+    <script src="assets/js/theme-init.js"></script>
     <link rel="icon" type="image/svg+xml" href="assets/images/favicon.svg">
     <link rel="preload" href="assets/fonts/manrope-latin.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="assets/fonts/dm-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -22,6 +23,8 @@ $student = current_user();
     <?php foreach ($extraStyles ?? [] as $stylesheet): ?>
     <link rel="stylesheet" href="<?= e($stylesheet) ?>">
     <?php endforeach; ?>
+    <link rel="stylesheet" href="assets/css/theme.css">
+    <script src="assets/js/theme.js" defer></script>
     <script src="assets/js/site.js" defer></script>
 </head>
 <body class="page-<?= e($activePage) ?>">
@@ -34,8 +37,14 @@ $student = current_user();
             <a href="exams.php" <?= $activePage === 'exams' ? 'aria-current="page"' : '' ?>>Full mock exams</a>
             <a href="practice.php" <?= $activePage === 'practice' ? 'aria-current="page"' : '' ?>>Practice library</a>
             <a href="index.php#how-it-works">How it works</a>
+            <a class="nav-mobile-account" href="<?= $student ? 'dashboard.php' : 'register.php' ?>"><?= $student ? 'My dashboard' : 'Create free account' ?></a>
         </nav>
         <div class="nav-actions">
+            <button class="theme-toggle" type="button" role="switch" aria-checked="false" aria-label="Dark mode" title="Switch to dark mode" hidden>
+                <svg class="theme-icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+                <svg class="theme-icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z"/></svg>
+                <span class="theme-toggle-label" aria-hidden="true">Light</span>
+            </button>
             <?php if ($student): ?>
                 <a class="login-link" href="dashboard.php">My dashboard</a>
                 <a class="btn btn-primary btn-small" href="practice.php">Let’s practice <?= icon('arrow', '', 17) ?></a>

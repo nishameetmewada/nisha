@@ -227,13 +227,13 @@ function nisha_learning_library(): array
             $session = [
                 'id' => $practiceId, 'name' => $course['name'] . ' · ' . $group['title'], 'exam' => $course['exam'],
                 'description' => 'Focused ' . strtolower($group['title']) . ' practice. Take your time and check each response when you are ready.',
-                'format_note' => 'The practice library combines full-mock items with additional original question-type exercises; some questions are shared across courses and modes. This session is untimed and the time shown is a suggestion. Instant feedback gives practice points only. Speaking and writing use self-review.',
+                'format_note' => 'The practice library combines full-mock items with additional original question-type exercises; some questions are shared across courses and modes. This session is untimed and the time shown is a suggestion. Objective checks give practice points. Writing and speaking offer optional AI coaching when configured, with self-review also available.',
                 'session_type' => 'practice', 'timing_mode' => 'untimed', 'course_id' => $course['id'], 'module_id' => $group['id'],
                 'resources' => $resources,
                 'sections' => [[
                     'id' => $sectionId, 'title' => $group['title'], 'navigation' => 'free',
                     'duration_seconds' => nisha_practice_suggested_seconds($items),
-                    'instructions' => 'Work at your own pace. Check a response for feedback, or move freely between questions. Writing and speaking need self-review; recordings stay on your device.',
+                    'instructions' => 'Work at your own pace. Check a response for feedback, or move freely between questions. Writing and speaking offer optional AI coaching. Recordings stay in this tab unless you choose to send one to OpenAI for review.',
                     'items' => $items,
                 ]],
             ];

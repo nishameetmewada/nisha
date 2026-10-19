@@ -7,7 +7,8 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - A responsive, original NISHA landing page and mobile navigation.
 - Registration, login, session-based student accounts, and a private dashboard.
 - A searchable practice library for IELTS Academic, IELTS General Training, PTE Academic and PTE Core, with skill filters and question-type exercises.
-- Untimed guided sessions with server-checked answers, explanations and writing/speaking self-review checklists.
+- Untimed guided sessions with server-checked answers, explanations and optional ChatGPT API coaching for writing/speaking.
+- Larger, readable typography and a persistent light/dark theme that initially follows the device preference.
 - Timed sectional mocks for every full-exam section, plus four complete original mocks.
 - Each IELTS mock: 40 listening and 40 reading questions, two writing tasks and three speaking parts.
 - PTE Academic: 68 tasks across 22 question types. PTE Core: 60 tasks across 19 question types.
@@ -17,11 +18,11 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - An optional legacy quick studio at `quick-practice.php`, with short six-question activities.
 - A MySQL schema for users, short practice history, and complete reports.
 
-The configured full mock budgets are 164 minutes for each IELTS version, 140 minutes for PTE Academic and 120 minutes for PTE Core. These are NISHA learning choices; real test counts and delivery arrangements vary. Objective tasks report raw practice points. Writing and speaking use self-review, without automated proficiency scores. Listening uses browser speech rather than professional test recordings. Some same-format questions are shared between course variants and practice modes, as disclosed in the catalogue.
+The configured full mock budgets are 164 minutes for each IELTS version, 140 minutes for PTE Academic and 120 minutes for PTE Core. These are NISHA learning choices; real test counts and delivery arrangements vary. Objective tasks report raw practice points. Writing and speaking offer optional OpenAI API practice estimates, criterion feedback and improvement plans when the site owner configures a key. Self-review remains available. AI estimates are separate from objective points and are not official or validated proficiency scores. Listening uses browser speech rather than professional test recordings. Some same-format questions are shared between course variants and practice modes, as disclosed in the catalogue.
 
 NISHA is an independent practice platform and is not affiliated with IELTS, Pearson PTE or Language Academy. All questions and interface assets are original or locally licensed. The homepage's growth illustration is decorative, not a real student's results. The hero portrait was generated for this website.
 
-For full exam formats, timing, audio limitations, privacy, scoring, and upgrade instructions, read [Full mock exams](docs/full-mock-exams.md) and [Practice library coverage](docs/practice-library.md). For browser warnings on a deployed site, see [Deployment security checks](docs/deployment-security.md).
+For full exam formats, timing, audio limitations, privacy, scoring, and upgrade instructions, read [Full mock exams](docs/full-mock-exams.md) and [Practice library coverage](docs/practice-library.md). To enable AI coaching, import `database/migrations/003_ai_reviews.sql` and add your API key privately to the existing config; see [AI coaching](docs/ai-coaching.md). For browser warnings on a deployed site, see [Deployment security checks](docs/deployment-security.md).
 
 ## Put it on Hostinger
 
@@ -32,7 +33,7 @@ Use a Hostinger **web hosting plan with PHP and MySQL**. This project is deploye
 3. Open phpMyAdmin for that database and **import `database/schema.sql`**. Select the database first. The import does not create or select a database and can be run again without deleting existing tables or records.
 4. Use File Manager or SFTP to upload the **contents** of this project into the site's `public_html` directory. `index.php` should sit directly in `public_html`, alongside `assets`, `includes`, `config`, `api`, and the other PHP pages. Preserve the root `.htaccess` and each protected folder's `.htaccess`. Remove a default `index.html` if it overrides your new homepage.
 5. Copy `config/config.example.php` to **`config/config.php`**. Edit only this new file using the database values from step 2. For Hostinger shared hosting, `db_host` is usually `localhost`; use the value actually shown in hPanel. Use port `3306` unless instructed otherwise. Never put database values in JavaScript or commit this private file to Git. Keep file permissions restricted to your hosting user and PHP (typically 600 or 640, depending on the host).
-6. Enable your domain's SSL certificate and turn on **Force HTTPS** in hPanel. HTTPS is required for browser microphone recording on a public site and for secure session cookies. No email, paid API, or external AI key is needed.
+6. Enable your domain's SSL certificate and turn on **Force HTTPS** in hPanel. HTTPS is required for browser microphone recording on a public site and for secure session cookies. Core practice and accounts need no external API. Optional ChatGPT coaching requires a separately billed OpenAI API key; follow [AI coaching setup](docs/ai-coaching.md).
 7. Visit your domain, create a new account, finish a reading/listening session or full mock, and check that the saved result appears on **My dashboard**. Sign out and sign in again. On your domain, requests to `/config/config.php`, `/database/schema.sql`, and `/includes/bootstrap.php` should return a forbidden response; the supplied Apache/LiteSpeed rules protect those directories.
 
 A deployment ZIP is provided separately with the project files at its root. It includes the example configuration but **does not include the local database configuration, students, passwords, database data, or development runtime**. Extract it into `public_html`, then complete steps 2, 3, 5, 6, and 7. Do not upload the `.git` directory, development tools, or database backups.
@@ -68,7 +69,7 @@ php -S 127.0.0.1:8000
 
 Use your browser to visit the PHP development server at port 8000. This server is only for local development and **does not enforce `.htaccess`**. Do not expose it as a production server. Hostinger runs the PHP site through its own web server; you do not run this command on shared hosting.
 
-The prepared cloud instance retains PHP and MariaDB tools outside this repository at `/workspace/.tools`. Its saved environment startup instructions describe how to restart the database and development server. These tools are not part of the Hostinger upload.
+For optional AI coaching, cURL or verified HTTPS streams and fileinfo are also needed. The prepared cloud instance retains PHP and MariaDB tools outside this repository at `/workspace/.tools`. Its saved environment startup instructions describe how to restart the database and development server. These tools are not part of the Hostinger upload.
 
 ## Files to edit
 
@@ -83,7 +84,11 @@ The prepared cloud instance retains PHP and MariaDB tools outside this repositor
 | `quick-practice.php`, `includes/practice-data.php`, `assets/js/practice.js` | Legacy short studio |
 | `includes/exams/` | Original full exam content |
 | `exams.php`, `assets/js/exams.js` | Shared guided, sectional and full exam room |
-| `api/practice-feedback.php` | Practice-only answer checks |
+| `api/practice-feedback.php` | Practice-only objective answer checks |
+| `includes/ai-review.php`, `includes/ai-review-service.php`, `api/ai-review.php` | OpenAI requests, validated scoring, quotas and private persistence |
+| `assets/js/ai-review.js`, `ai-reviews.php` | AI review controls and owner-only coaching history |
+| `assets/css/theme.css`, `assets/js/theme.js` | Readable light/dark design and preference |
+| `database/migrations/003_ai_reviews.sql` | Add AI review history and durable usage limits |
 | `includes/exam-grading.php` | Server-side practice marking |
 | `database/schema.sql` | Database tables |
 | `database/migrations/002_full_exams.sql` | Add full mock history to an existing installation |

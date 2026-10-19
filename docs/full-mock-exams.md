@@ -43,7 +43,7 @@ Core has 60 tasks across Speaking & Writing (30), Reading (15) and Listening (15
 
 ## Guided and sectional sessions
 
-Guided sessions collect items of one question type and allow free navigation, audio replay, transcripts and an answer check after each response. They have no section or task countdown and are labelled guided practice. The suggested time remains guidance. Changing an answer clears its old feedback; checking again obtains a fresh server result. Speaking and writing checks return self-review criteria rather than automatic language scores.
+Guided sessions collect items of one question type and allow free navigation, audio replay, transcripts and an answer check after each response. They have no section or task countdown and are labelled guided practice. The suggested time remains guidance. Changing an answer clears its old feedback; checking again obtains a fresh server result. The ordinary answer check returns self-review criteria for speaking/writing. A separate explicit “Review with AI” action offers optional ChatGPT API practice estimates and improvement guidance; see `ai-coaching.md`.
 
 Sectional sessions take an exact section from the selected full mock and preserve its time budget and navigation rules. Their content overlaps the full mock. Finish a guided or sectional session to save its report to the same private account history. Device autosave and its 48-hour expiry apply to all modes.
 
@@ -51,7 +51,7 @@ Sectional sessions take an exact section from the selected full mock and preserv
 
 Listening is generated from the supplied original scripts using the browser's speech voices. It is not a collection of professionally recorded official test audio. Check sound before starting; availability and quality depend on the student's browser/device. In exam mode a resource can be played once, and its script stays hidden. Assisted mode makes replay/transcripts available and labels the attempt as assisted, so a device without working speech audio can still use the material. Changing to assistance during a session remains reflected in the report.
 
-Speaking recording is optional. It requires microphone permission in a supporting browser over HTTPS (or localhost in development). Audio stays on the device and is not uploaded to MySQL. Download recordings before leaving the page; they cannot be restored through a reload or account history. A mock can still be completed with self-guided spoken responses when recording is unavailable.
+Speaking recording is optional. It requires microphone permission in a supporting browser over HTTPS (or localhost in development). Audio stays in the current tab unless the student explicitly sends a selected recording to OpenAI for AI coaching. NISHA does not retain uploaded audio in MySQL or public storage. Download recordings before leaving the page; they cannot be restored through a reload or account history. A mock can still be completed with self-guided spoken responses when recording is unavailable.
 
 ## Saving, resuming, and timing
 
@@ -66,7 +66,7 @@ At final submission, the server marks objective responses against its original a
 - IELTS reading and listening show raw correct-answer totals out of 40.
 - PTE shows practice points for supported objective tasks. Gap filling gives credit per correct blank; reordering uses correct adjacent pairs; multiple selection and incorrect-word highlighting deduct wrong selections down to zero. The review explains the practice marker.
 - Write from Dictation uses a simplified normalized exact-sentence check. It does not implement Pearson's word-level or integrated scoring.
-- Spoken responses, essays, and written/spoken summaries are ungraded and include reflection rubrics. A recording or a long response is not evidence of language proficiency.
+- Spoken responses, essays, and summaries remain ungraded in the deterministic objective report. Optional ChatGPT API coaching provides separate practice estimates, criteria and improvement plans. IELTS writing can receive an estimated practice band; PTE writing and all transcribed speaking use independent practice percentages. Speaking delivery/pronunciation is not assessed. A recording or a long response alone is not evidence of language proficiency.
 - Skipped objective questions contribute zero points. A partially completed exam remains labelled incomplete. Assisted attempts are labelled assisted.
 - NISHA does not calculate an official IELTS overall band or a PTE score out of 90. Official speaking/writing assessment, examiner delivery, proprietary scoring, and test security are outside this independent mock.
 
@@ -76,7 +76,8 @@ At final submission, the server marks objective responses against its original a
 2. Upload the updated project files to `public_html`, preserving your existing private `config/config.php`. Do not upload the development `.tools` directory, test accounts, or a local database.
 3. In phpMyAdmin, select your existing database and import **`database/migrations/002_full_exams.sql`**. It creates the new `exam_runs` table without replacing `users` or `attempts`. Importing `database/schema.sql` is also safe for the supplied schema because table creation uses `IF NOT EXISTS`; no existing records are removed.
 4. Visit `exams.php`, complete a sample attempt, and check both guest marking and signed-in report saving. Verify that an account cannot open another account's saved result.
-5. Keep HTTPS enabled for microphone support and secure account sessions.
+5. To enable optional AI coaching, also import `database/migrations/003_ai_reviews.sql` and follow `docs/ai-coaching.md` for the private key and API setup.
+6. Keep HTTPS enabled for microphone support and secure account sessions.
 
 The migration is needed for saving guided, sectional and full mock history; an installation that already has `exam_runs` needs no additional migration for the practice library. Without it the server still marks an exam and clearly reports that the result was not saved.
 

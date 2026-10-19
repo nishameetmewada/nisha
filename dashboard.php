@@ -56,7 +56,8 @@ require __DIR__ . '/includes/header.php';
         </div>
         <div class="account-actions">
             <a class="btn btn-primary" href="practice.php">Start practicing <span aria-hidden="true">→</span></a>
-            <a class="btn btn-outline" href="exams.php">Explore practice and mocks</a>
+            <a class="btn btn-outline" href="ai-reviews.php">My AI coaching</a>
+            <a class="btn btn-outline" href="exams.php">Explore mocks</a>
             <form method="post" action="logout.php"><?= csrf_field() ?><button type="submit" class="btn btn-outline">Sign out</button></form>
         </div>
     </div>

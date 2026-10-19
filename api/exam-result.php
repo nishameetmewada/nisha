@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
+require_once dirname(__DIR__) . '/includes/ai-review-service.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -30,9 +31,13 @@ try {
         result_reply(404, ['error' => 'This saved result was not found in your account.']);
     }
     $result = json_decode($row['result_json'], true, 32, JSON_THROW_ON_ERROR);
+    // A missing optional AI migration must not make an existing exam unreadable.
+    $aiReviews = [];
+    try { $aiReviews = nisha_ai_saved_reviews(db(), (int) $user['id'], $result); }
+    catch (Throwable $exception) { /* The original result remains available. */ }
     result_reply(200, [
         'success' => true, 'saved' => true, 'result_id' => (int) $row['id'],
-        'save_message' => 'Saved to your NISHA dashboard.', 'result' => $result,
+        'save_message' => 'Saved to your NISHA dashboard.', 'result' => $result, 'ai_reviews' => $aiReviews,
     ]);
 } catch (Throwable $exception) {
     result_reply(503, ['error' => 'Saved mock results are temporarily unavailable. Please try again shortly.']);

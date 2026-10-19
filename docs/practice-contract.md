@@ -2,8 +2,7 @@
 
 NISHA offers four course variants: `ielts-academic`, `ielts-general`,
 `pte-academic`, and `pte-core`. All material is original, unofficial practice.
-Writing and speaking responses receive self-review guidance, never automatic
-bands or official PTE scores. Audio recordings remain only in the student's current browser tab and must be downloaded before reloading or closing.
+Writing and speaking offer self-review plus optional separately requested OpenAI API practice estimates and improvement guidance. No official IELTS/PTE score is generated. Recordings remain in the current tab unless explicitly sent for AI transcription/review. Download them before leaving; NISHA does not retain uploaded audio.
 
 ## Canonical content and catalogue
 
@@ -93,3 +92,7 @@ feedback uses the same simplified marking rules as full mocks. Short answers
 normalize case, punctuation and whitespace; word limits still apply. Writing
 and speaking points remain null. Saved results are readable only by their owner
 through `api/exam-result.php`.
+
+## Optional AI coaching
+
+`api/ai-review.php` is a distinct authenticated/CSRF endpoint for essay/spoken tasks. Canonical resolution and version checking remain server-owned. Timed sessions require a completed owned saved attempt; practice may request coaching before submission. AI estimates never change objective points. SQL migration003 adds owner-specific history and durable daily limits. See `docs/ai-coaching.md` and the `nisha_ai_submit` implementation for payload, scoring, audio validation, idempotency and privacy.

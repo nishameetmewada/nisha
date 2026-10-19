@@ -76,6 +76,8 @@
             saved.played = Array.isArray(saved.played) ? saved.played : [];
             saved.itemClocks = saved.itemClocks && typeof saved.itemClocks === 'object' ? saved.itemClocks : {};
             saved.audioEnded = saved.audioEnded && typeof saved.audioEnded === 'object' ? saved.audioEnded : {};
+            saved.aiDrafts = saved.aiDrafts && typeof saved.aiDrafts === 'object' ? saved.aiDrafts : {};
+            saved.aiReviews = Array.isArray(saved.aiReviews) ? saved.aiReviews : [];
             return saved;
         } catch (error) {
             storageWarning = 'Device autosave is unavailable. Keep this tab open and download your responses before leaving.';
@@ -191,7 +193,7 @@
             attemptId: window.crypto?.randomUUID?.() || `attempt-${now}-${Math.random().toString(36).slice(2, 14)}`,
             startedAt: now, expiresAt: now + lifetime, updatedAt: now,
             sectionIndex: 0, itemIndex: 0, sectionDeadline: now + exam.sections[0].duration_seconds * 1000,
-            answers: {}, flags: [], played: [], completedSections: [], itemClocks: {}, audioEnded: {},
+            answers: {}, flags: [], played: [], completedSections: [], itemClocks: {}, audioEnded: {}, aiDrafts: {}, aiReviews: [],
             assisted: $('assisted-mode').checked, phase: 'running', endedAt: null,
         };
         $('exam-setup-dialog').close();
@@ -395,7 +397,8 @@
         $('item-task-type').textContent = question.task_type || question.type;
         $('item-kicker').textContent = question.title || `${exam.exam} PRACTICE`;
         $('item-title').textContent = question.prompt || question.title || question.task_type;
-        $('item-instructions').textContent = question.instructions || '';
+        const taskInstructions = (question.instructions || '').replace('This response requires self-review; no automated band is awarded.', guided() ? 'Use the checklist or request optional AI coaching below when configured. AI scores are practice estimates.' : 'Use the checklist. Optional AI coaching is available after you submit and save this timed test.');
+        $('item-instructions').textContent = taskInstructions;
         $('previous-item').hidden = part.navigation === 'forward';
         $('previous-item').disabled = state.itemIndex === 0;
         $('next-item').textContent = state.itemIndex === part.items.length - 1 ? state.sectionIndex === exam.sections.length - 1 ? 'Finish & submit →' : 'Next section →' : 'Next task →';
@@ -496,7 +499,10 @@
             return false;
         }
         state.answers[id] = value;
-        if (guided()) { feedbackCache.delete(id); feedbackRequest++; renderPracticeFeedback(); }
+        if (guided()) {
+            feedbackCache.delete(id); feedbackRequest++; renderPracticeFeedback();
+            document.querySelectorAll('#item-response .ai-review-panel').forEach((panel) => window.NishaAI?.refresh(panel));
+        }
         scheduleSave();
         const part = section();
         $('runner-progress').textContent = `Section ${state.sectionIndex + 1} of ${exam.sections.length} · ${part.items.filter((entry) => answered(state.answers[entry.id])).length} of ${part.items.length} responses entered`;
@@ -960,7 +966,7 @@
             textarea.addEventListener('input', () => { updateAnswer(question.id, textarea.value); count.textContent = `${wordCount(textarea.value)} words`; });
             label.append(textarea); container.append(label, meta);
             if (question.suggested_seconds) container.append(el('p', 'exam-small-copy', `${timed() && exam.exam === 'PTE' ? 'Task time limit' : 'Suggested task time'}: ${Math.round(question.suggested_seconds / 60)} minutes.${timed() ? ' Your section timer continues.' : ' Guided practice has no countdown.'}`));
-            container.append(el('p', 'exam-small-copy', 'Writing is retained as text for self-review, without an automatic score.'));
+            container.append(el('p', 'exam-small-copy', guided() ? 'Your response is saved on this device. Request optional AI coaching below, or use the self-review checklist.' : 'Your response is retained for review. Optional AI coaching is available after you finish and save this timed test.'));
         } else if (question.type === 'spoken') {
             if (Array.isArray(question.cues)) {
                 const cues = el('ul', 'exam-speaking-cues');
@@ -976,7 +982,7 @@
             if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
                 button.disabled = true;
                 status.textContent = 'Recording is unavailable. You can practise aloud; use a supported browser on HTTPS or localhost to record.';
-            } else status.textContent = 'Optional microphone recording. Audio is kept only in this tab and is never uploaded or scored.';
+            } else status.textContent = 'Optional microphone recording. Audio stays in this tab unless you explicitly send it to OpenAI for AI coaching.';
             recorder.append(button, status);
             const playback = el('div', 'exam-recording-playback'); playback.dataset.recordPlayback = 'true'; recorder.append(playback);
             container.append(recorder);
@@ -987,6 +993,39 @@
             label.append(notes); container.append(label);
             renderRecordingPlayback(question.id);
         }
+        if (guided() && ['essay', 'spoken'].includes(question.type) && window.NishaAI) container.append(makeAIPanel(question));
+    }
+
+    function makeAIPanel(question, resultReview = null) {
+        const result = resultReview ? currentEnvelope?.result : null;
+        const attemptState = state;
+        const examId = result?.exam_id || exam?.id;
+        const version = result?.exam_version || exam?.version;
+        const attemptId = result?.attempt_id || state?.attemptId;
+        const matchingState = attemptState && attemptState.attemptId === attemptId && attemptState.examId === examId && attemptState.version === version;
+        const memory = matchingState ? attemptState : currentEnvelope;
+        memory.aiDrafts = memory.aiDrafts && typeof memory.aiDrafts === 'object' ? memory.aiDrafts : {};
+        memory.aiReviews = Array.isArray(memory.aiReviews) ? memory.aiReviews : [];
+        const draft = memory.aiDrafts[question.id] || (memory.aiDrafts[question.id] = {});
+        const historyEntries = Array.isArray(currentEnvelope?.ai_reviews) && resultReview ? currentEnvelope.ai_reviews : [];
+        const entries = [...memory.aiReviews, ...historyEntries];
+        return window.NishaAI.mount({
+            item: { ...question, type: resultReview?.type || question.type }, examId, examVersion: version, attemptId,
+            signedIn: Boolean(config.signedIn), config: config.aiReview, guided: !resultReview && guided(), saved: resultReview ? Boolean(currentEnvelope.saved) : true,
+            getResponse: () => resultReview ? resultReview.response : attemptState.answers[question.id] || '',
+            getRecording: () => (state?.attemptId === attemptId && state?.examId === examId) ? recordings.get(question.id)?.blob : null,
+            draft, entries, onChange: (updatedDraft, updatedEntries) => {
+                memory.aiDrafts[question.id] = updatedDraft;
+                const uniqueEntries = new Map([...(memory.aiReviews || []), ...updatedEntries].map((entry) => [entry.id, entry]));
+                memory.aiReviews = [...uniqueEntries.values()];
+                if (matchingState && state === attemptState) saveState();
+                if (resultReview && currentEnvelope?.result.attempt_id === attemptId) currentEnvelope.ai_reviews = memory.aiReviews;
+            },
+        });
+    }
+
+    function refreshAIPanels() {
+        document.querySelectorAll('.ai-review-panel').forEach((panel) => window.NishaAI?.refresh(panel));
     }
 
     function renderReorder(question, container, focusId, direction) {
@@ -1089,6 +1128,7 @@
                 recordingStatus(id, 'Recording ready. Listen back or download it. It remains available during this tab’s session, including on your results.');
                 renderRecordingPlayback(id);
                 renderLocalRecordings();
+                refreshAIPanels();
             });
             active.recorder.addEventListener('error', () => {
                 stopRecording(true);
@@ -1126,7 +1166,7 @@
         audio.setAttribute('aria-label', 'Your recorded response');
         const actions = el('div', 'exam-recording-actions');
         const remove = el('button', 'exam-text-button', 'Delete recording'); remove.type = 'button';
-        remove.addEventListener('click', () => { audio.pause(); URL.revokeObjectURL(value.url); recordings.delete(id); renderRecordingPlayback(id); renderLocalRecordings(); recordingStatus(id, 'Local recording deleted.'); });
+        remove.addEventListener('click', () => { audio.pause(); URL.revokeObjectURL(value.url); recordings.delete(id); renderRecordingPlayback(id); renderLocalRecordings(); recordingStatus(id, 'Local recording deleted.'); refreshAIPanels(); });
         actions.append(recordingDownload(id, value), remove);
         container.append(audio, actions);
     }
@@ -1136,7 +1176,7 @@
         if (!recordings.size || !exam) return;
         const make = () => {
             const block = el('section', 'exam-local-recordings');
-            block.append(el('h2', '', 'Keep a little record of your progress.'), el('p', 'exam-small-copy', 'These recordings exist only in this tab. Download them before reloading or closing it. They are not uploaded, marked or included in the JSON result.'));
+            block.append(el('h2', '', 'Keep a little record of your progress.'), el('p', 'exam-small-copy', 'These recordings exist only in this tab. Download them before reloading or closing it. They are uploaded to OpenAI only when you choose AI coaching. The audio files are not included in the saved result or JSON download.'));
             const list = el('ul');
             const questions = new Map(items(exam).map((question) => [question.id, question]));
             recordings.forEach((value, id) => { const li = el('li'); li.append(recordingDownload(id, value, `${questions.get(id)?.title || id} · download ↓`)); list.append(li); });
@@ -1250,25 +1290,25 @@
         view('result');
         $('result-catalog').textContent = result.session_type && result.session_type !== 'full' ? '← Practice library' : '← All mock exams';
         $('result-mode').textContent = `${result.session_type === 'practice' ? 'GUIDED PRACTICE' : result.assisted ? 'ASSISTED PRACTICE' : 'EXAM MODE'}${result.incomplete ? ' · INCOMPLETE' : ''}`;
-        const score = el('strong', '', result.objective_total ? result.objective_score : 'Self-review');
+        const score = el('strong', '', result.objective_total ? result.objective_score : 'Writing & speaking');
         if (result.objective_total) score.append(el('span', '', `/${result.objective_total}`));
         $('exam-result-points').closest('.exam-result-score').classList.toggle('is-self-review', !result.objective_total);
-        $('exam-result-points').nextElementSibling.textContent = result.objective_total ? 'OBJECTIVE PRACTICE POINTS' : 'NO AUTOMATIC SCORE';
+        $('exam-result-points').nextElementSibling.textContent = result.objective_total ? 'OBJECTIVE PRACTICE POINTS' : 'WRITING & SPEAKING PRACTICE';
         $('exam-result-points').replaceChildren(...score.childNodes);
         $('exam-result-name').textContent = result.name;
-        $('exam-result-summary').textContent = `${result.answered_items} of ${result.total_items} tasks have a text response · ${formatTime(result.elapsed_seconds)} elapsed. ${result.incomplete ? 'This attempt is incomplete: not all sections were finished. ' : ''}Writing and speaking require self-review and have no automatic score.`;
+        $('exam-result-summary').textContent = `${result.answered_items} of ${result.total_items} tasks have a text response · ${formatTime(result.elapsed_seconds)} elapsed. ${result.incomplete ? 'This attempt is incomplete: not all sections were finished. ' : ''}Writing and speaking offer separate AI practice estimates and improvement guidance, alongside self-review.`;
         $('retry-save-result').hidden = !(config.signedIn && !envelope.saved && state && state.attemptId === result.attempt_id);
         $('exam-result-save').replaceChildren();
         $('exam-result-save').append(el('strong', '', envelope.saved ? 'Your account result is saved.' : 'This result is not saved to an account.'), el('p', '', envelope.save_message || (envelope.saved ? 'Find it again from your dashboard.' : 'Download a copy to keep your review.')));
         if (!config.signedIn) { const link = el('a', 'exam-text-button', 'Create an account for future saved results →'); link.href = 'register.php'; $('exam-result-save').append(link); }
         $('exam-result-sections').replaceChildren(...result.sections.map((part) => {
             const card = el('article'); card.append(el('h2', '', part.title));
-            card.append(el('strong', '', part.total > 0 ? `${part.score} / ${part.total}` : 'Self-review'));
+            card.append(el('strong', '', part.total > 0 ? `${part.score} / ${part.total}` : 'AI / self-review'));
             card.append(el('p', '', `${part.answered} of ${part.total_items} text responses${part.ungraded_items ? ` · ${part.ungraded_items} ungraded` : ''}`));
             if (!(result.completed_sections || []).includes(part.id)) card.append(el('span', 'exam-incomplete-label', 'Section not completed'));
             return card;
         }));
-        $('exam-grading-note').textContent = result.grading_note || 'Raw practice points only. Writing and speaking require self-review; no official exam score is generated.';
+        $('exam-grading-note').textContent = result.grading_note || 'Raw practice points only. AI coaching provides separate writing and speaking practice estimates; no official exam score is generated.';
         const select = $('review-section'); select.replaceChildren(Object.assign(el('option', '', 'All sections'), { value: '' }));
         result.sections.forEach((part) => select.append(Object.assign(el('option', '', part.title), { value: part.id })));
         renderReview();
@@ -1312,7 +1352,8 @@
                 body.append(el('h3', '', 'Your self-review checklist'));
                 const list = el('ul'); review.rubric.forEach((point) => list.append(el('li', '', point))); body.append(list);
             }
-            if (review.type === 'spoken') body.append(el('p', 'exam-small-copy', 'Speaking is not automatically marked. Any optional recording is kept only in this tab and is not part of this saved result.'));
+            if (review.type === 'spoken') body.append(el('p', 'exam-small-copy', 'AI speaking coaching reviews content and language from a transcript. Pronunciation, fluency and delivery are not assessed. A recording is uploaded to OpenAI only if you choose AI review; its audio is not kept with this saved result.'));
+            if (['essay', 'spoken'].includes(review.type) && window.NishaAI) body.append(makeAIPanel({ ...(question || review), id: review.id, type: review.type }, review));
             const resources = currentEnvelope?.result.resources || exam?.resources || {};
             const inlinePassage = ['choice', 'multi'].includes(question?.type) ? question.text : null;
             const stimulusIds = [question?.resource_id || review.resource_id, question?.secondary_resource_id || review.secondary_resource_id].filter((id) => resources[id]);

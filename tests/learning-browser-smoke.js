@@ -290,7 +290,7 @@ const feedbackPayload = (session, item, response) => ({ exam_id: session.id, exa
     await page.locator('#exam-confirm-dialog[open]').waitFor();
     await page.locator('#exam-confirm-yes').click();
     await page.locator('#exam-result:not([hidden])').waitFor();
-    ok((await page.locator('#exam-result-points').innerText()).trim() === 'Self-review', 'Speaking-only practice displays Self-review instead of fabricated points');
+    ok((await page.locator('#exam-result-points').innerText()).trim() === 'Writing & speaking' && await page.locator('#exam-result .ai-review-panel').count() > 0, 'Speaking-only practice offers AI coaching while leaving objective points unscored');
 
     for (const id of ['ielts-general-01', 'pte-core-01']) {
         await start(id);

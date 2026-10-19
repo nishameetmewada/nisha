@@ -38,6 +38,11 @@ function config(?string $key = null, mixed $default = null): mixed
             'db_name' => getenv('DB_NAME') ?: '',
             'db_user' => getenv('DB_USER') ?: '',
             'db_password' => getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : '',
+            'openai_api_key' => getenv('NISHA_OPENAI_API_KEY') ?: (getenv('OPENAI_API_KEY') ?: ''),
+            'openai_model' => getenv('NISHA_OPENAI_MODEL') ?: 'gpt-4.1-mini',
+            'openai_transcription_model' => getenv('NISHA_OPENAI_TRANSCRIPTION_MODEL') ?: 'gpt-4o-mini-transcribe',
+            'ai_reviews_per_student_day' => getenv('NISHA_AI_STUDENT_DAILY_LIMIT') ?: 10,
+            'ai_reviews_per_day' => getenv('NISHA_AI_DAILY_LIMIT') ?: 100,
         ];
         $localFile = NISHA_ROOT . '/config/config.php';
         if (is_file($localFile)) {
@@ -46,6 +51,16 @@ function config(?string $key = null, mixed $default = null): mixed
                 $configuration = array_replace($configuration, $localConfiguration);
             }
         }
+        // Explicit AI environment settings also work with a copied example
+        // config containing blank/default AI entries. Database precedence stays.
+        foreach (['NISHA_OPENAI_API_KEY' => 'openai_api_key', 'NISHA_OPENAI_MODEL' => 'openai_model',
+            'NISHA_OPENAI_TRANSCRIPTION_MODEL' => 'openai_transcription_model',
+            'NISHA_AI_STUDENT_DAILY_LIMIT' => 'ai_reviews_per_student_day', 'NISHA_AI_DAILY_LIMIT' => 'ai_reviews_per_day'] as $variable => $setting) {
+            $value = getenv($variable);
+            if ($value !== false && trim($value) !== '') $configuration[$setting] = $value;
+        }
+        if ((getenv('NISHA_OPENAI_API_KEY') === false || trim((string) getenv('NISHA_OPENAI_API_KEY')) === '')
+            && getenv('OPENAI_API_KEY') !== false && trim((string) getenv('OPENAI_API_KEY')) !== '') $configuration['openai_api_key'] = getenv('OPENAI_API_KEY');
     }
 
     return $key === null ? $configuration : ($configuration[$key] ?? $default);

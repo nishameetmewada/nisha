@@ -202,7 +202,7 @@ function nisha_grade_exam(array $exam, array $submission): array
         'objective_score' => 0, 'objective_total' => 0, 'answered_items' => 0, 'total_items' => 0,
         'sections' => [], 'review' => [], 'responses' => $submission['answers'],
         'resources' => $exam['resources'] ?? [],
-        'grading_note' => 'Raw practice points only; writing/speaking require self-review. These are not official IELTS band scores or PTE scores.',
+        'grading_note' => 'Objective raw practice points only. Writing/speaking offer optional AI coaching or self-review, separately from these points. These are not official IELTS band scores or PTE scores.',
     ];
     foreach ($exam['sections'] as $section) {
         $sectionResult = [

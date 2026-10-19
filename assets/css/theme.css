@@ -1,0 +1,1548 @@
+/* Shared appearance tokens. Local fonts remain self-hosted in every theme. */
+:root {
+    color-scheme: light;
+    --paper: #f8f7f2;
+    --ink: #26352c;
+    --green: #1d523d;
+    --green-dark: #163d2e;
+    --muted: #596451;
+    --line: #cbd2c3;
+    --surface: #fffefa;
+    --surface-alt: #edf1e2;
+    --on-accent: #ffffff;
+    --focus: #2f704e;
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #151f1a;
+    --ink: #edf3e9;
+    --green: #b7d99a;
+    --green-dark: #cfeab7;
+    --muted: #b4c2ad;
+    --line: #405046;
+    --lime: #dceba9;
+    --peach: #3c3028;
+    --sage: #28372c;
+    --lavender: #332e3f;
+    --butter: #3c3828;
+    --surface: #1e2a23;
+    --surface-alt: #29382d;
+    --on-accent: #172316;
+    --focus: #c5e6a3;
+}
+body { font-size: 17px; line-height: 1.7; }
+::selection { background: #d7e8b7; color: #183324; }
+[data-theme="dark"] ::selection { background: #b7d99a; color: #172316; }
+input, textarea, select { font-size: 16px; }
+input::placeholder, textarea::placeholder { opacity: 1; }
+.exam-small-copy { color: var(--muted) !important; font-size: 14px !important; }
+:root[data-theme="light"] .form-error { color: #924731; }
+a:focus-visible, button:focus-visible, summary:focus-visible,
+input:focus-visible, textarea:focus-visible, select:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 4px;
+}
+.theme-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    gap: 7px;
+    min-height: 44px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+    color: var(--ink);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+}
+.theme-toggle[hidden] { display: none; }
+.theme-toggle:hover { background: var(--surface-alt); }
+.theme-icon-moon { display: none; }
+[data-theme="dark"] .theme-icon-moon { display: block; }
+[data-theme="dark"] .theme-icon-sun { display: none; }
+.nav-wrap { gap: 22px; }
+.main-nav { gap: 23px; padding-left: 0; }
+.main-nav a, .login-link { font-size: 15px; }
+.nav-mobile-account { display: none; }
+.nav-actions { gap: 15px; }
+.btn { font-size: 16px; }
+.btn-small { font-size: 14px; }
+.eyebrow { font-size: 13px; letter-spacing: 1px; }
+.hero-description { font-size: 17px; }
+.hero-reassurance { font-size: 13px; }
+.hero-footnote { font-size: 14px; }
+.hero-footnote strong { color: var(--ink); }
+.skill-card > p, .why-copy > p, .why-features p,
+.step p, .faq-list details > p { font-size: 16px; }
+.skill-card > p { max-width: none; }
+.skill-card > strong, .skill-cta { font-size: 15px; }
+.belief-strip .container { font-size: 14px; flex-wrap: wrap; padding-block: 16px; }
+.photo-caption { font-size: 12px; letter-spacing: .4px; text-align: center; }
+.goal-card small { font-size: 12px; letter-spacing: .4px; }
+.goal-card strong { font-size: 14px; }
+.exam-sticker > span { font-size: 11px; letter-spacing: .5px; }
+.exam-sticker { width: 128px; height: 128px; }
+.journey-top { font-size: 12px; letter-spacing: .5px; }
+.journey-card > p, .journey-footer, .small-wins span { font-size: 13px; }
+.chart-labels { font-size: 11px; }
+.small-wins strong { font-size: 14px; }
+.footer-bottom { font-size: 13px; }
+.form-field input, .form-field select, .form-field textarea { font-size: 16px; }
+.learning-intro > div > p:last-child, .learning-library-heading p:last-child,
+.learning-section-heading p:last-child, .learning-module > p,
+.learning-good-to-know p { font-size: 16px; }
+.learning-course-family { font-size: 13px; letter-spacing: .7px; }
+.learning-course-tab strong { font-size: 18px; }
+.learning-search-form > input[type="search"] { font-size: 16px; }
+.learning-filter, .learning-module-link { font-size: 15px; }
+.learning-filter small, .learning-module-count,
+.learning-module-skill, .learning-module-bottom > span { font-size: 13px; }
+.learning-module-top { flex-wrap: wrap; }
+.learning-module-count { margin-left: auto; }
+.learning-module-bottom { flex-wrap: wrap; }
+.learning-module h3 { font-size: 21px; }
+.learning-module { min-height: 325px; }
+.learning-sectional p { flex-wrap: wrap; font-size: 14px; }
+.learning-course-tabs, .learning-module-grid, .learning-section-grid { align-items: stretch; }
+.auth-card .form-intro, .form-field label, .auth-switch { font-size: 16px; }
+.form-hint, .form-password-note, .stat-helper { font-size: 14px; }
+.dashboard-grid, .practice-paths { min-width: 0; }
+.stat-card { min-width: 0; }
+.stat-label { font-size: 14px; overflow-wrap: anywhere; }
+.stat-helper { display: block; }
+.practice-path-card { min-width: 0; }
+
+/* Improve contrast for the original soft secondary text in light mode. */
+
+#learning-result-count,
+#speaking-tools > p:not(.creative-privacy),
+.account-banner p,
+.account-intro p,
+.attempts-table td,
+.attempts-table th,
+.audio-help,
+.auth-card .form-intro,
+.auth-lead,
+.auth-switch,
+.belief-strip .container,
+.belief-strip svg,
+.card-arrow,
+.chart-labels,
+.clock-symbol,
+.creative-finish > p,
+.creative-privacy,
+.creative-prompt > p,
+.creative-prompt > ul,
+.creative-reflection label,
+.creative-work-panel textarea::placeholder,
+.empty-state,
+.exam-audio-once,
+.exam-card-badge,
+.exam-card-description,
+.exam-card-note,
+.exam-card-sections span,
+.exam-card-sections strong,
+.exam-card-stats,
+.exam-card-stats span + span::before,
+.exam-chart-bar-row,
+.exam-chart-group > strong,
+.exam-chart-table,
+.exam-chart-table caption,
+.exam-chart-table th,
+.exam-checkbox,
+.exam-checkbox small,
+.exam-checkbox strong,
+.exam-choice,
+.exam-dialog form > p:not(.eyebrow),
+.exam-dialog-close,
+.exam-equipment > p,
+.exam-flag-button,
+.exam-flag-button[aria-pressed="true"],
+.exam-footnote,
+.exam-footnote a,
+.exam-gap-passage,
+.exam-guided-feedback small,
+.exam-highlight-words,
+.exam-how-grid > div > span,
+.exam-how-grid p,
+.exam-incomplete-label,
+.exam-input-label,
+.exam-item-instructions,
+.exam-item-time > span,
+.exam-item-toolbar > div,
+.exam-item-toolbar > div > span:first-child,
+.exam-large-spark,
+.exam-mode-label,
+.exam-navigation-note,
+.exam-notice,
+.exam-option-letter,
+.exam-passage p,
+.exam-privacy p,
+.exam-question-map > div,
+.exam-question-map button,
+.exam-question-map button.is-answered,
+.exam-question-map strong,
+.exam-reorder button,
+.exam-reorder li,
+.exam-reorder-index,
+.exam-resource-guidance > p:last-child,
+.exam-resource-spark,
+.exam-result-hero #exam-result-name,
+.exam-result-hero #exam-result-summary,
+.exam-result-save p,
+.exam-result-save strong,
+.exam-result-score > span,
+.exam-result-score > strong > span,
+.exam-result-section-grid p,
+.exam-result-section-grid strong,
+.exam-resume-note,
+.exam-review-answer,
+.exam-review-body,
+.exam-review-body h3,
+.exam-review-heading > label,
+.exam-review-heading select,
+.exam-review-item summary small,
+.exam-review-item summary strong,
+.exam-review-item summary::after,
+.exam-review-points,
+.exam-run-heading > div:first-child > p:last-child,
+.exam-run-status,
+.exam-section-clock > div > span,
+.exam-section-clock.is-low strong,
+.exam-setup-actions > span,
+.exam-setup-dialog #setup-exam-name,
+.exam-small-copy,
+.exam-speaking-cues,
+.exam-submission-card > #submission-message,
+.exam-tag,
+.exam-tag.pte,
+.exam-text-button:hover,
+.exam-transcript summary,
+.exam-transcript-text p,
+.exam-writing-area::placeholder,
+.exam-writing-meta,
+.exam-writing-meta strong,
+.faq-list details > p,
+.faq-list summary > span,
+.footer-bottom,
+.footer-brand-block > p,
+.footer-links > a,
+.footer-links > span,
+.footer-note,
+.footer-note > p,
+.form-error,
+.form-field input::placeholder,
+.form-hint,
+.form-password-note,
+.full-length-label,
+.full-mock-note,
+.full-preview-card > p,
+.full-preview-facts,
+.goal-card small,
+.handwritten-note,
+.hero-description,
+.hero-footnote,
+.hero-reassurance,
+.hero-reassurance svg,
+.hero-spark,
+.journey-card > p,
+.journey-footer,
+.journey-icon,
+.journey-top,
+.learning-course-family,
+.learning-course-tab strong,
+.learning-empty > span,
+.learning-empty h3,
+.learning-empty p,
+.learning-filter,
+.learning-filter small,
+.learning-good-to-know > div:first-child > span,
+.learning-good-to-know h2,
+.learning-good-to-know h3,
+.learning-good-to-know p,
+.learning-grid-heading > p > span,
+.learning-intro > div > p:last-child,
+.learning-intro-note > span:not(.learning-note-spark),
+.learning-library-heading p:last-child,
+.learning-module > p,
+.learning-module-bottom > span,
+.learning-module-count,
+.learning-module-link,
+.learning-module-link:hover,
+.learning-module-listening .learning-skill-icon,
+.learning-module-skill,
+.learning-module-speaking .learning-skill-icon,
+.learning-module-speaking-writing .learning-skill-icon,
+.learning-module-writing .learning-skill-icon,
+.learning-note-spark,
+.learning-search-form,
+.learning-search-form > button,
+.learning-search-form > input[type="search"]::placeholder,
+.learning-section-heading p:last-child,
+.learning-sectional h3,
+.learning-sectional p,
+.learning-sectional p > span + span::before,
+.learning-sectional-icon,
+.learning-sectional-link,
+.learning-skill-icon,
+.learning-subtle-link,
+.learning-timed-label,
+.learning-warmup-note,
+.learning-warmup-note a,
+.listening-player p,
+.little-spark,
+.map-flag-legend,
+.mock-assisted,
+.mock-history-note,
+.needs-review .exam-review-points,
+.option-letter,
+.panel-heading > a,
+.panel-heading p,
+.practice-bottom-note,
+.practice-bottom-note svg,
+.practice-dialog p,
+.practice-disclaimer,
+.practice-intro-note > span:last-child,
+.practice-page .skill-icon,
+.practice-page .skill-icon-listening,
+.practice-page .skill-icon-speaking,
+.practice-page .skill-icon-writing,
+.practice-path-card p,
+.practice-reassurance,
+.practice-session-tag,
+.practice-skill > small,
+.practice-skill > span:not(.skill-icon):not(.skill-selected-mark),
+.practice-spark,
+.practice-text-button:hover,
+.question-hint,
+.question-jump button,
+.question-option,
+.quiz-finish-row > span,
+.quiz-progress > div,
+.resource-label,
+.resource-original,
+.resource-passage p,
+.results-message > p:not(.eyebrow),
+.results-meta,
+.results-next-step p,
+.results-score > span,
+.results-score strong > span,
+.review-badge,
+.review-body,
+.review-body strong,
+.review-explanation,
+.review-heading > p,
+.review-incorrect .review-badge,
+.review-item summary::after,
+.review-number,
+.session-preview-actions > span,
+.session-timer > span,
+.session-timer small,
+.skill-card > p,
+.stat-helper,
+.stat-label,
+.step p,
+.step-number,
+.studio-fullmock-banner p,
+.timer-low strong,
+.why-copy > p,
+.why-features > div > span,
+.why-features p,
+.writing-meta,
+.writing-meta > span:first-child { color: var(--muted); }
+
+/* Explicit dark surfaces and text for landing, account, library and test views. */
+
+[data-theme="dark"] .account-actions a:focus-visible,
+[data-theme="dark"] .account-banner a:focus-visible,
+[data-theme="dark"] .auth-card a:focus-visible,
+[data-theme="dark"] .auth-card button:focus-visible,
+[data-theme="dark"] .exam-choice:has(input:focus-visible),
+[data-theme="dark"] .exam-sticker,
+[data-theme="dark"] .mock-history a:focus-visible,
+[data-theme="dark"] .practice-path-card a:focus-visible,
+[data-theme="dark"] .practice-path-card:focus-visible,
+[data-theme="dark"] .question-option:has(input:focus-visible),
+[data-theme="dark"] a:focus-visible,
+[data-theme="dark"] button:focus-visible,
+[data-theme="dark"] input:focus-visible,
+[data-theme="dark"] select:focus-visible,
+[data-theme="dark"] summary:focus-visible,
+[data-theme="dark"] textarea:focus-visible { outline-color: var(--focus); }
+
+[data-theme="dark"] .account-banner,
+[data-theme="dark"] .account-banner a,
+[data-theme="dark"] .account-intro h1,
+[data-theme="dark"] .attempts-table td strong,
+[data-theme="dark"] .audio-play-button,
+[data-theme="dark"] .auth-card h2,
+[data-theme="dark"] .auth-note strong,
+[data-theme="dark"] .auth-points,
+[data-theme="dark"] .auth-story h1,
+[data-theme="dark"] .belief-strip .container > span,
+[data-theme="dark"] .btn-primary,
+[data-theme="dark"] .empty-state h3,
+[data-theme="dark"] .exam-choice.is-selected .exam-option-letter,
+[data-theme="dark"] .exam-switch button.is-selected,
+[data-theme="dark"] .exam-toggle button.is-active,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field label,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .hero-footnote strong,
+[data-theme="dark"] .is-selected .option-letter,
+[data-theme="dark"] .learning-course-tab.is-active strong,
+[data-theme="dark"] .learning-full-mock h2,
+[data-theme="dark"] .learning-module h3,
+[data-theme="dark"] .panel-heading h2,
+[data-theme="dark"] .practice-path-card h3,
+[data-theme="dark"] .skill-selected-mark,
+[data-theme="dark"] .small-wins,
+[data-theme="dark"] .stat-card:first-child,
+[data-theme="dark"] .stat-card:first-child .stat-value,
+[data-theme="dark"] .stat-value { color: var(--ink); }
+
+[data-theme="dark"] .auth-badge,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .auth-switch,
+[data-theme="dark"] .belief-strip,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .creative-finish,
+[data-theme="dark"] .creative-reflection,
+[data-theme="dark"] .creative-work-panel textarea,
+[data-theme="dark"] .cta-rings,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-audio-once,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-card-sections,
+[data-theme="dark"] .exam-card-sections li + li,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice:hover,
+[data-theme="dark"] .exam-diagram-graphic,
+[data-theme="dark"] .exam-dialog,
+[data-theme="dark"] .exam-equipment,
+[data-theme="dark"] .exam-flag-button,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-guided-feedback,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-highlight-words button:hover,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-item-time,
+[data-theme="dark"] .exam-local-recordings,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-privacy,
+[data-theme="dark"] .exam-question-map,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-recorder,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-result-save,
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .exam-result-section-grid article,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item,
+[data-theme="dark"] .exam-review-response,
+[data-theme="dark"] .exam-section-clock,
+[data-theme="dark"] .exam-section-clock.is-low,
+[data-theme="dark"] .exam-short-input,
+[data-theme="dark"] .exam-speaking-notes,
+[data-theme="dark"] .exam-submission-card,
+[data-theme="dark"] .exam-switch,
+[data-theme="dark"] .exam-toggle,
+[data-theme="dark"] .exam-transcript,
+[data-theme="dark"] .exam-writing-area,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .full-preview-card,
+[data-theme="dark"] .full-preview-card.pte-preview,
+[data-theme="dark"] .full-preview-link,
+[data-theme="dark"] .goal-card,
+[data-theme="dark"] .hero-orbit,
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .journey-footer,
+[data-theme="dark"] .learning-course-check,
+[data-theme="dark"] .learning-course-sectionals,
+[data-theme="dark"] .learning-course-tabs,
+[data-theme="dark"] .learning-empty,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter:hover,
+[data-theme="dark"] .learning-good-to-know,
+[data-theme="dark"] .learning-intro-note,
+[data-theme="dark"] .learning-module,
+[data-theme="dark"] .learning-module-bottom,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-module:hover,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-sectional,
+[data-theme="dark"] .learning-sectional-link,
+[data-theme="dark"] .listening-player,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .photo-caption,
+[data-theme="dark"] .play-circle,
+[data-theme="dark"] .practice-dialog,
+[data-theme="dark"] .practice-intro-note,
+[data-theme="dark"] .practice-intro-note::after,
+[data-theme="dark"] .practice-noscript,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card:hover,
+[data-theme="dark"] .practice-path-card:nth-child(2),
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .practice-skill,
+[data-theme="dark"] .pte-preview .full-preview-link,
+[data-theme="dark"] .question-jump,
+[data-theme="dark"] .question-jump .is-answered,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option,
+[data-theme="dark"] .question-option:hover,
+[data-theme="dark"] .recorder-visual,
+[data-theme="dark"] .resource-original,
+[data-theme="dark"] .results-next-step,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .review-item,
+[data-theme="dark"] .session-timer,
+[data-theme="dark"] .session-timer.timer-low,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .stat-card:nth-child(2),
+[data-theme="dark"] .studio-fullmock-banner { border-top-color: var(--line); }
+
+[data-theme="dark"] .auth-badge,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .creative-work-panel textarea,
+[data-theme="dark"] .cta-rings,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice:hover,
+[data-theme="dark"] .exam-diagram-graphic,
+[data-theme="dark"] .exam-dialog,
+[data-theme="dark"] .exam-equipment,
+[data-theme="dark"] .exam-flag-button,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-guided-feedback,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-highlight-words button:hover,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-item-time,
+[data-theme="dark"] .exam-local-recordings,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-privacy,
+[data-theme="dark"] .exam-question-map,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-recorder,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-result-save,
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .exam-result-section-grid article,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item,
+[data-theme="dark"] .exam-review-response,
+[data-theme="dark"] .exam-section-clock,
+[data-theme="dark"] .exam-section-clock.is-low,
+[data-theme="dark"] .exam-short-input,
+[data-theme="dark"] .exam-speaking-notes,
+[data-theme="dark"] .exam-submission-card,
+[data-theme="dark"] .exam-switch,
+[data-theme="dark"] .exam-toggle,
+[data-theme="dark"] .exam-writing-area,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .full-preview-card,
+[data-theme="dark"] .full-preview-card.pte-preview,
+[data-theme="dark"] .goal-card,
+[data-theme="dark"] .hero-orbit,
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .learning-course-check,
+[data-theme="dark"] .learning-course-tabs,
+[data-theme="dark"] .learning-empty,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter:hover,
+[data-theme="dark"] .learning-intro-note,
+[data-theme="dark"] .learning-module,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-module:hover,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-sectional,
+[data-theme="dark"] .listening-player,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .photo-caption,
+[data-theme="dark"] .play-circle,
+[data-theme="dark"] .practice-dialog,
+[data-theme="dark"] .practice-intro-note,
+[data-theme="dark"] .practice-intro-note::after,
+[data-theme="dark"] .practice-noscript,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card:hover,
+[data-theme="dark"] .practice-path-card:nth-child(2),
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .practice-skill,
+[data-theme="dark"] .pte-preview .full-preview-link,
+[data-theme="dark"] .question-jump .is-answered,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option,
+[data-theme="dark"] .question-option:hover,
+[data-theme="dark"] .recorder-visual,
+[data-theme="dark"] .resource-original,
+[data-theme="dark"] .results-next-step,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .review-item,
+[data-theme="dark"] .session-timer,
+[data-theme="dark"] .session-timer.timer-low,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .stat-card:nth-child(2),
+[data-theme="dark"] .studio-fullmock-banner { border-right-color: var(--line); }
+
+[data-theme="dark"] .assisted-choice,
+[data-theme="dark"] .attempts-table td,
+[data-theme="dark"] .attempts-table th,
+[data-theme="dark"] .auth-badge,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .belief-strip,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .chart-bars,
+[data-theme="dark"] .creative-work-panel textarea,
+[data-theme="dark"] .cta-rings,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-card-sections,
+[data-theme="dark"] .exam-chart-table td,
+[data-theme="dark"] .exam-chart-table th,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice:hover,
+[data-theme="dark"] .exam-diagram-graphic,
+[data-theme="dark"] .exam-dialog,
+[data-theme="dark"] .exam-equipment,
+[data-theme="dark"] .exam-flag-button,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-guided-feedback,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-highlight-words button:hover,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-item-time,
+[data-theme="dark"] .exam-local-recordings,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-privacy,
+[data-theme="dark"] .exam-question-map,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-recorder,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-result-save,
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .exam-result-section-grid article,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item,
+[data-theme="dark"] .exam-review-response,
+[data-theme="dark"] .exam-run-status,
+[data-theme="dark"] .exam-section-clock,
+[data-theme="dark"] .exam-section-clock.is-low,
+[data-theme="dark"] .exam-short-input,
+[data-theme="dark"] .exam-speaking-notes,
+[data-theme="dark"] .exam-submission-card,
+[data-theme="dark"] .exam-switch,
+[data-theme="dark"] .exam-toggle,
+[data-theme="dark"] .exam-transcript,
+[data-theme="dark"] .exam-writing-area,
+[data-theme="dark"] .faq-list details,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .full-preview-card,
+[data-theme="dark"] .full-preview-card.pte-preview,
+[data-theme="dark"] .goal-card,
+[data-theme="dark"] .hero-orbit,
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .learning-course-check,
+[data-theme="dark"] .learning-course-tabs,
+[data-theme="dark"] .learning-empty,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter:hover,
+[data-theme="dark"] .learning-intro-note,
+[data-theme="dark"] .learning-module,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-module:hover,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-sectional,
+[data-theme="dark"] .listening-player,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .photo-caption,
+[data-theme="dark"] .play-circle,
+[data-theme="dark"] .practice-dialog,
+[data-theme="dark"] .practice-intro-note,
+[data-theme="dark"] .practice-intro-note::after,
+[data-theme="dark"] .practice-noscript,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card:hover,
+[data-theme="dark"] .practice-path-card:nth-child(2),
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .practice-skill,
+[data-theme="dark"] .pte-preview .full-preview-link,
+[data-theme="dark"] .question-jump .is-answered,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option,
+[data-theme="dark"] .question-option:hover,
+[data-theme="dark"] .recorder-visual,
+[data-theme="dark"] .resource-original,
+[data-theme="dark"] .results-next-step,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .review-item,
+[data-theme="dark"] .session-timer,
+[data-theme="dark"] .session-timer.timer-low,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .stat-card:nth-child(2),
+[data-theme="dark"] .studio-fullmock-banner,
+[data-theme="dark"] .text-link { border-bottom-color: var(--line); }
+
+[data-theme="dark"] .auth-badge,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .auth-note,
+[data-theme="dark"] .btn-outline,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .creative-work-panel textarea,
+[data-theme="dark"] .cta-rings,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice:hover,
+[data-theme="dark"] .exam-diagram-graphic,
+[data-theme="dark"] .exam-dialog,
+[data-theme="dark"] .exam-equipment,
+[data-theme="dark"] .exam-flag-button,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-guided-feedback,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-highlight-words button:hover,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-item-time,
+[data-theme="dark"] .exam-local-recordings,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-privacy,
+[data-theme="dark"] .exam-question-map,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-recorder,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-result-save,
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .exam-result-section-grid article,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-explanation,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item,
+[data-theme="dark"] .exam-review-response,
+[data-theme="dark"] .exam-section-clock,
+[data-theme="dark"] .exam-section-clock.is-low,
+[data-theme="dark"] .exam-short-input,
+[data-theme="dark"] .exam-speaking-notes,
+[data-theme="dark"] .exam-submission-card,
+[data-theme="dark"] .exam-switch,
+[data-theme="dark"] .exam-toggle,
+[data-theme="dark"] .exam-writing-area,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .full-preview-card,
+[data-theme="dark"] .full-preview-card.pte-preview,
+[data-theme="dark"] .goal-card,
+[data-theme="dark"] .hero-orbit,
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .learning-course-check,
+[data-theme="dark"] .learning-course-tabs,
+[data-theme="dark"] .learning-empty,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter:hover,
+[data-theme="dark"] .learning-intro-note,
+[data-theme="dark"] .learning-module,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-module:hover,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-sectional,
+[data-theme="dark"] .listening-player,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .photo-caption,
+[data-theme="dark"] .play-circle,
+[data-theme="dark"] .practice-dialog,
+[data-theme="dark"] .practice-intro-note,
+[data-theme="dark"] .practice-intro-note::after,
+[data-theme="dark"] .practice-noscript,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card:hover,
+[data-theme="dark"] .practice-path-card:nth-child(2),
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .practice-skill,
+[data-theme="dark"] .pte-preview .full-preview-link,
+[data-theme="dark"] .question-jump .is-answered,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option,
+[data-theme="dark"] .question-option:hover,
+[data-theme="dark"] .recorder-visual,
+[data-theme="dark"] .resource-original,
+[data-theme="dark"] .results-next-step,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .review-explanation,
+[data-theme="dark"] .review-item,
+[data-theme="dark"] .session-timer,
+[data-theme="dark"] .session-timer.timer-low,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .stat-card,
+[data-theme="dark"] .stat-card:nth-child(2),
+[data-theme="dark"] .studio-fullmock-banner { border-left-color: var(--line); }
+
+[data-theme="dark"] .account-banner,
+[data-theme="dark"] .auth-badge::before,
+[data-theme="dark"] .auth-note,
+[data-theme="dark"] .auth-points li::before,
+[data-theme="dark"] .btn-lime:hover,
+[data-theme="dark"] .btn-outline:hover,
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .caption-dot,
+[data-theme="dark"] .chart-bars div,
+[data-theme="dark"] .chart-bars div:nth-child(n+6),
+[data-theme="dark"] .chart-series-4 .exam-chart-bar,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-chart-bar,
+[data-theme="dark"] .exam-chart-track,
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-privacy,
+[data-theme="dark"] .exam-question-map,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-reorder-index,
+[data-theme="dark"] .exam-resource-guidance,
+[data-theme="dark"] .exam-result-save,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-points,
+[data-theme="dark"] .exam-tag,
+[data-theme="dark"] .exam-tag.ielts,
+[data-theme="dark"] .form-success,
+[data-theme="dark"] .full-preview-card,
+[data-theme="dark"] .goal-icon,
+[data-theme="dark"] .hero-photo,
+[data-theme="dark"] .journey-icon,
+[data-theme="dark"] .learning-course-tabs,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter:hover,
+[data-theme="dark"] .learning-intro-note,
+[data-theme="dark"] .learning-live-dot,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-search-form > button:hover,
+[data-theme="dark"] .learning-sectional,
+[data-theme="dark"] .learning-skill-icon,
+[data-theme="dark"] .listening-player,
+[data-theme="dark"] .mini-progress i,
+[data-theme="dark"] .mini-progress i:nth-child(n+10),
+[data-theme="dark"] .practice-intro-note,
+[data-theme="dark"] .practice-page .skill-icon,
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .question-jump .is-answered,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .quiz-progress progress,
+[data-theme="dark"] .quiz-progress progress::-webkit-progress-bar,
+[data-theme="dark"] .quiz-progress progress::-webkit-progress-value,
+[data-theme="dark"] .recorder-visual span,
+[data-theme="dark"] .recorder-visual span:nth-child(2n),
+[data-theme="dark"] .recorder-visual span:nth-child(3n),
+[data-theme="dark"] .results-next-step,
+[data-theme="dark"] .review-badge,
+[data-theme="dark"] .session-preview-dot,
+[data-theme="dark"] .small-wins > svg,
+[data-theme="dark"] .stat-card:nth-child(2),
+[data-theme="dark"] .status-dot,
+[data-theme="dark"] .step-number,
+[data-theme="dark"] .studio-fullmock-banner,
+[data-theme="dark"] .why-features > div > span,
+[data-theme="dark"] .why-section { background-color: var(--surface-alt); }
+
+[data-theme="dark"] #learning-result-count,
+[data-theme="dark"] #speaking-tools > p:not(.creative-privacy),
+[data-theme="dark"] .account-banner p,
+[data-theme="dark"] .account-banner::after,
+[data-theme="dark"] .account-intro p,
+[data-theme="dark"] .attempts-table a,
+[data-theme="dark"] .attempts-table td,
+[data-theme="dark"] .attempts-table th,
+[data-theme="dark"] .audio-help,
+[data-theme="dark"] .auth-card .form-intro,
+[data-theme="dark"] .auth-lead,
+[data-theme="dark"] .auth-note,
+[data-theme="dark"] .auth-switch,
+[data-theme="dark"] .belief-strip .container,
+[data-theme="dark"] .belief-strip svg,
+[data-theme="dark"] .card-arrow,
+[data-theme="dark"] .chart-labels,
+[data-theme="dark"] .clock-symbol,
+[data-theme="dark"] .creative-finish > p,
+[data-theme="dark"] .creative-privacy,
+[data-theme="dark"] .creative-prompt > p,
+[data-theme="dark"] .creative-prompt > ul,
+[data-theme="dark"] .creative-reflection label,
+[data-theme="dark"] .creative-work-panel textarea::placeholder,
+[data-theme="dark"] .cta-flower,
+[data-theme="dark"] .cta-section .eyebrow,
+[data-theme="dark"] .cta-section p,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-audio-once,
+[data-theme="dark"] .exam-card-badge,
+[data-theme="dark"] .exam-card-description,
+[data-theme="dark"] .exam-card-note,
+[data-theme="dark"] .exam-card-sections span,
+[data-theme="dark"] .exam-card-sections strong,
+[data-theme="dark"] .exam-card-stats,
+[data-theme="dark"] .exam-card-stats span + span::before,
+[data-theme="dark"] .exam-chart-bar-row,
+[data-theme="dark"] .exam-chart-group > strong,
+[data-theme="dark"] .exam-chart-table,
+[data-theme="dark"] .exam-chart-table caption,
+[data-theme="dark"] .exam-chart-table th,
+[data-theme="dark"] .exam-checkbox,
+[data-theme="dark"] .exam-checkbox small,
+[data-theme="dark"] .exam-checkbox strong,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .exam-diagram figcaption,
+[data-theme="dark"] .exam-diagram-description,
+[data-theme="dark"] .exam-dialog form > p:not(.eyebrow),
+[data-theme="dark"] .exam-dialog-close,
+[data-theme="dark"] .exam-equipment > p,
+[data-theme="dark"] .exam-flag-button,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-footnote,
+[data-theme="dark"] .exam-footnote a,
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-gap-passage,
+[data-theme="dark"] .exam-guided-feedback small,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-how-grid > div > span,
+[data-theme="dark"] .exam-how-grid p,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-input-label,
+[data-theme="dark"] .exam-item-instructions,
+[data-theme="dark"] .exam-item-time > span,
+[data-theme="dark"] .exam-item-toolbar > div,
+[data-theme="dark"] .exam-item-toolbar > div > span:first-child,
+[data-theme="dark"] .exam-large-spark,
+[data-theme="dark"] .exam-mode-label,
+[data-theme="dark"] .exam-navigation-note,
+[data-theme="dark"] .exam-notice,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-passage p,
+[data-theme="dark"] .exam-privacy p,
+[data-theme="dark"] .exam-question-map > div,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-question-map button.is-answered,
+[data-theme="dark"] .exam-question-map strong,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-reorder-index,
+[data-theme="dark"] .exam-resource-guidance > p:last-child,
+[data-theme="dark"] .exam-resource-spark,
+[data-theme="dark"] .exam-result-hero #exam-result-name,
+[data-theme="dark"] .exam-result-hero #exam-result-summary,
+[data-theme="dark"] .exam-result-save p,
+[data-theme="dark"] .exam-result-save strong,
+[data-theme="dark"] .exam-result-score > span,
+[data-theme="dark"] .exam-result-score > strong > span,
+[data-theme="dark"] .exam-result-section-grid p,
+[data-theme="dark"] .exam-result-section-grid strong,
+[data-theme="dark"] .exam-resume-note,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-body,
+[data-theme="dark"] .exam-review-body h3,
+[data-theme="dark"] .exam-review-heading > label,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item summary small,
+[data-theme="dark"] .exam-review-item summary strong,
+[data-theme="dark"] .exam-review-item summary::after,
+[data-theme="dark"] .exam-review-points,
+[data-theme="dark"] .exam-run-heading > div:first-child > p:last-child,
+[data-theme="dark"] .exam-run-status,
+[data-theme="dark"] .exam-section-clock > div > span,
+[data-theme="dark"] .exam-section-clock.is-low strong,
+[data-theme="dark"] .exam-setup-actions > span,
+[data-theme="dark"] .exam-setup-dialog #setup-exam-name,
+[data-theme="dark"] .exam-small-copy,
+[data-theme="dark"] .exam-speaking-cues,
+[data-theme="dark"] .exam-submission-card > #submission-message,
+[data-theme="dark"] .exam-tag,
+[data-theme="dark"] .exam-tag.ielts,
+[data-theme="dark"] .exam-tag.pte,
+[data-theme="dark"] .exam-text-button:hover,
+[data-theme="dark"] .exam-transcript summary,
+[data-theme="dark"] .exam-transcript-text p,
+[data-theme="dark"] .exam-writing-area::placeholder,
+[data-theme="dark"] .exam-writing-meta,
+[data-theme="dark"] .exam-writing-meta strong,
+[data-theme="dark"] .faq-flower,
+[data-theme="dark"] .faq-list details > p,
+[data-theme="dark"] .faq-list summary > span,
+[data-theme="dark"] .footer-bottom,
+[data-theme="dark"] .footer-brand-block > p,
+[data-theme="dark"] .footer-links > a,
+[data-theme="dark"] .footer-links > span,
+[data-theme="dark"] .footer-note,
+[data-theme="dark"] .footer-note > p,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input::placeholder,
+[data-theme="dark"] .form-hint,
+[data-theme="dark"] .form-password-note,
+[data-theme="dark"] .full-length-label,
+[data-theme="dark"] .full-mock-note,
+[data-theme="dark"] .full-preview-card > p,
+[data-theme="dark"] .full-preview-facts,
+[data-theme="dark"] .goal-card small,
+[data-theme="dark"] .handwritten-note,
+[data-theme="dark"] .hero-description,
+[data-theme="dark"] .hero-footnote,
+[data-theme="dark"] .hero-reassurance,
+[data-theme="dark"] .hero-reassurance svg,
+[data-theme="dark"] .hero-spark,
+[data-theme="dark"] .journey-card > p,
+[data-theme="dark"] .journey-footer,
+[data-theme="dark"] .journey-icon,
+[data-theme="dark"] .journey-top,
+[data-theme="dark"] .learning-course-check,
+[data-theme="dark"] .learning-course-family,
+[data-theme="dark"] .learning-course-tab strong,
+[data-theme="dark"] .learning-course-tab.is-active .learning-course-family,
+[data-theme="dark"] .learning-empty > span,
+[data-theme="dark"] .learning-empty h3,
+[data-theme="dark"] .learning-empty p,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-filter small,
+[data-theme="dark"] .learning-filter.is-active,
+[data-theme="dark"] .learning-filter.is-active small,
+[data-theme="dark"] .learning-full-decoration,
+[data-theme="dark"] .learning-full-facts,
+[data-theme="dark"] .learning-full-mock .eyebrow,
+[data-theme="dark"] .learning-full-mock > div > p:not(.eyebrow),
+[data-theme="dark"] .learning-good-to-know > div:first-child > span,
+[data-theme="dark"] .learning-good-to-know h2,
+[data-theme="dark"] .learning-good-to-know h3,
+[data-theme="dark"] .learning-good-to-know p,
+[data-theme="dark"] .learning-grid-heading > p > span,
+[data-theme="dark"] .learning-grid-heading strong,
+[data-theme="dark"] .learning-intro > div > p:last-child,
+[data-theme="dark"] .learning-intro-note > span:not(.learning-note-spark),
+[data-theme="dark"] .learning-library-heading p:last-child,
+[data-theme="dark"] .learning-module > p,
+[data-theme="dark"] .learning-module-bottom > span,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-module-link,
+[data-theme="dark"] .learning-module-link:hover,
+[data-theme="dark"] .learning-module-listening .learning-skill-icon,
+[data-theme="dark"] .learning-module-skill,
+[data-theme="dark"] .learning-module-speaking .learning-skill-icon,
+[data-theme="dark"] .learning-module-speaking-writing .learning-skill-icon,
+[data-theme="dark"] .learning-module-writing .learning-skill-icon,
+[data-theme="dark"] .learning-note-leaves,
+[data-theme="dark"] .learning-note-spark,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-search-form > button,
+[data-theme="dark"] .learning-search-form > input[type="search"]::placeholder,
+[data-theme="dark"] .learning-section-heading p:last-child,
+[data-theme="dark"] .learning-sectional h3,
+[data-theme="dark"] .learning-sectional p,
+[data-theme="dark"] .learning-sectional p > span + span::before,
+[data-theme="dark"] .learning-sectional-icon,
+[data-theme="dark"] .learning-sectional-link,
+[data-theme="dark"] .learning-skill-icon,
+[data-theme="dark"] .learning-subtle-link,
+[data-theme="dark"] .learning-timed-label,
+[data-theme="dark"] .learning-warmup-note,
+[data-theme="dark"] .learning-warmup-note a,
+[data-theme="dark"] .listening-player p,
+[data-theme="dark"] .little-spark,
+[data-theme="dark"] .map-flag-legend,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .mock-history-note,
+[data-theme="dark"] .needs-review .exam-review-points,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .panel-heading > a,
+[data-theme="dark"] .panel-heading p,
+[data-theme="dark"] .practice-bottom-note,
+[data-theme="dark"] .practice-bottom-note svg,
+[data-theme="dark"] .practice-dialog p,
+[data-theme="dark"] .practice-disclaimer,
+[data-theme="dark"] .practice-intro-note > span:last-child,
+[data-theme="dark"] .practice-page .skill-icon,
+[data-theme="dark"] .practice-page .skill-icon-listening,
+[data-theme="dark"] .practice-page .skill-icon-speaking,
+[data-theme="dark"] .practice-page .skill-icon-writing,
+[data-theme="dark"] .practice-path-card p,
+[data-theme="dark"] .practice-reassurance,
+[data-theme="dark"] .practice-session-tag,
+[data-theme="dark"] .practice-skill > small,
+[data-theme="dark"] .practice-skill > span:not(.skill-icon):not(.skill-selected-mark),
+[data-theme="dark"] .practice-spark,
+[data-theme="dark"] .practice-text-button:hover,
+[data-theme="dark"] .question-hint,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option,
+[data-theme="dark"] .quiz-finish-row > span,
+[data-theme="dark"] .quiz-progress > div,
+[data-theme="dark"] .resource-label,
+[data-theme="dark"] .resource-original,
+[data-theme="dark"] .resource-passage p,
+[data-theme="dark"] .results-message > p:not(.eyebrow),
+[data-theme="dark"] .results-meta,
+[data-theme="dark"] .results-next-step p,
+[data-theme="dark"] .results-score > span,
+[data-theme="dark"] .results-score strong > span,
+[data-theme="dark"] .review-badge,
+[data-theme="dark"] .review-body,
+[data-theme="dark"] .review-body strong,
+[data-theme="dark"] .review-explanation,
+[data-theme="dark"] .review-heading > p,
+[data-theme="dark"] .review-incorrect .review-badge,
+[data-theme="dark"] .review-item summary::after,
+[data-theme="dark"] .review-number,
+[data-theme="dark"] .session-preview-actions > span,
+[data-theme="dark"] .session-timer > span,
+[data-theme="dark"] .session-timer small,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .skill-card > p,
+[data-theme="dark"] .skill-icon,
+[data-theme="dark"] .stat-card:first-child .stat-helper,
+[data-theme="dark"] .stat-card:first-child .stat-label,
+[data-theme="dark"] .stat-helper,
+[data-theme="dark"] .stat-label,
+[data-theme="dark"] .step p,
+[data-theme="dark"] .step-number,
+[data-theme="dark"] .studio-fullmock-banner p,
+[data-theme="dark"] .timer-low strong,
+[data-theme="dark"] .why-copy > p,
+[data-theme="dark"] .why-features > div > span,
+[data-theme="dark"] .why-features p,
+[data-theme="dark"] .writing-meta,
+[data-theme="dark"] .writing-meta > span:first-child { color: var(--muted); }
+
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .card,
+[data-theme="dark"] .creative-work-panel,
+[data-theme="dark"] .creative-work-panel textarea,
+[data-theme="dark"] .dashboard-panel,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .exam-choice,
+[data-theme="dark"] .exam-choice:hover,
+[data-theme="dark"] .exam-diagram-graphic,
+[data-theme="dark"] .exam-dialog,
+[data-theme="dark"] .exam-equipment,
+[data-theme="dark"] .exam-gap-input,
+[data-theme="dark"] .exam-gap-input:focus,
+[data-theme="dark"] .exam-guided-feedback,
+[data-theme="dark"] .exam-highlight-words,
+[data-theme="dark"] .exam-item-time,
+[data-theme="dark"] .exam-local-recordings,
+[data-theme="dark"] .exam-option-letter,
+[data-theme="dark"] .exam-question-map button,
+[data-theme="dark"] .exam-recorder,
+[data-theme="dark"] .exam-reorder button,
+[data-theme="dark"] .exam-reorder li,
+[data-theme="dark"] .exam-resource-panel,
+[data-theme="dark"] .exam-response-panel,
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .exam-result-section-grid article,
+[data-theme="dark"] .exam-review-answer,
+[data-theme="dark"] .exam-review-heading select,
+[data-theme="dark"] .exam-review-item,
+[data-theme="dark"] .exam-review-response,
+[data-theme="dark"] .exam-section-clock,
+[data-theme="dark"] .exam-section-clock.is-low,
+[data-theme="dark"] .exam-short-input,
+[data-theme="dark"] .exam-speaking-notes,
+[data-theme="dark"] .exam-submission-card,
+[data-theme="dark"] .exam-switch,
+[data-theme="dark"] .exam-toggle,
+[data-theme="dark"] .exam-writing-area,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .form-field input,
+[data-theme="dark"] .form-field select,
+[data-theme="dark"] .form-field textarea,
+[data-theme="dark"] .full-exam-card,
+[data-theme="dark"] .goal-card,
+[data-theme="dark"] .journey-card,
+[data-theme="dark"] .learning-course-tab:hover,
+[data-theme="dark"] .learning-empty,
+[data-theme="dark"] .learning-filter,
+[data-theme="dark"] .learning-module,
+[data-theme="dark"] .learning-module-count,
+[data-theme="dark"] .learning-search-form,
+[data-theme="dark"] .learning-sectional-icon,
+[data-theme="dark"] .main-nav,
+[data-theme="dark"] .mock-assisted,
+[data-theme="dark"] .option-letter,
+[data-theme="dark"] .photo-caption,
+[data-theme="dark"] .practice-dialog,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card:nth-child(2),
+[data-theme="dark"] .practice-resource,
+[data-theme="dark"] .practice-skill,
+[data-theme="dark"] .practice-skill.is-selected,
+[data-theme="dark"] .practice-studio,
+[data-theme="dark"] .question-jump button,
+[data-theme="dark"] .question-option:hover,
+[data-theme="dark"] .question-panel,
+[data-theme="dark"] .recorder-visual,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .review-item,
+[data-theme="dark"] .session-timer,
+[data-theme="dark"] .session-timer.timer-low,
+[data-theme="dark"] .setup-notice,
+[data-theme="dark"] .skill-icon,
+[data-theme="dark"] .stat-card { background-color: var(--surface); }
+
+[data-theme="dark"] .belief-strip,
+[data-theme="dark"] .chart-series-3 .exam-chart-bar,
+[data-theme="dark"] .learning-module-speaking .learning-skill-icon,
+[data-theme="dark"] .learning-module-speaking-writing .learning-skill-icon,
+[data-theme="dark"] .practice-page .skill-icon-speaking { background-color: var(--butter); }
+
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field input[aria-invalid="true"],
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .full-exam-card.is-recommended,
+[data-theme="dark"] .full-preview-card:hover,
+[data-theme="dark"] .learning-search-form:focus-within,
+[data-theme="dark"] .practice-skill.is-selected,
+[data-theme="dark"] .practice-skill:hover,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .skill-card,
+[data-theme="dark"] .stat-card:first-child { border-top-color: var(--focus); }
+
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field input[aria-invalid="true"],
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .full-exam-card.is-recommended,
+[data-theme="dark"] .full-preview-card:hover,
+[data-theme="dark"] .learning-search-form:focus-within,
+[data-theme="dark"] .practice-skill.is-selected,
+[data-theme="dark"] .practice-skill:hover,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .skill-card,
+[data-theme="dark"] .stat-card:first-child { border-right-color: var(--focus); }
+
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field input[aria-invalid="true"],
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .full-exam-card.is-recommended,
+[data-theme="dark"] .full-preview-card:hover,
+[data-theme="dark"] .learning-search-form:focus-within,
+[data-theme="dark"] .practice-skill.is-selected,
+[data-theme="dark"] .practice-skill:hover,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .skill-card,
+[data-theme="dark"] .stat-card:first-child { border-bottom-color: var(--focus); }
+
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .form-field input:focus,
+[data-theme="dark"] .form-field input[aria-invalid="true"],
+[data-theme="dark"] .form-field select:focus,
+[data-theme="dark"] .full-exam-card.is-recommended,
+[data-theme="dark"] .full-preview-card:hover,
+[data-theme="dark"] .learning-search-form:focus-within,
+[data-theme="dark"] .practice-skill.is-selected,
+[data-theme="dark"] .practice-skill:hover,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .skill-card,
+[data-theme="dark"] .stat-card:first-child { border-left-color: var(--focus); }
+
+[data-theme="dark"] .exam-result-score,
+[data-theme="dark"] .results-score,
+[data-theme="dark"] .step-number { outline-color: var(--line); }
+
+[data-theme="dark"] .chart-series-1 .exam-chart-bar,
+[data-theme="dark"] .exam-flag-button[aria-pressed="true"],
+[data-theme="dark"] .exam-highlight-words button.is-selected,
+[data-theme="dark"] .exam-incomplete-label,
+[data-theme="dark"] .exam-question-map button.is-flagged::after,
+[data-theme="dark"] .exam-tag.pte,
+[data-theme="dark"] .form-error,
+[data-theme="dark"] .full-preview-card.pte-preview,
+[data-theme="dark"] .learning-module-listening .learning-skill-icon,
+[data-theme="dark"] .needs-review .exam-review-points,
+[data-theme="dark"] .practice-noscript,
+[data-theme="dark"] .practice-page .skill-icon-listening,
+[data-theme="dark"] .review-incorrect .review-badge { background-color: var(--peach); }
+
+[data-theme="dark"] .auth-badge,
+[data-theme="dark"] .auth-points li::before,
+[data-theme="dark"] .auth-story h1 em,
+[data-theme="dark"] .auth-switch a,
+[data-theme="dark"] .learning-sectional-link:hover,
+[data-theme="dark"] .practice-path-card,
+[data-theme="dark"] .practice-path-card > a { color: var(--green); }
+
+[data-theme="dark"] .chart-series-2 .exam-chart-bar,
+[data-theme="dark"] .learning-module-writing .learning-skill-icon,
+[data-theme="dark"] .practice-page .skill-icon-writing { background-color: var(--lavender); }
+
+
+/* Accent backgrounds use a dedicated text color in both appearances. */
+.btn-primary, .btn-primary:hover,
+.exam-toggle button.is-active, .exam-switch button.is-selected,
+.learning-course-tab.is-active { color: var(--on-accent); }
+.learning-course-tab.is-active strong,
+.learning-course-tab.is-active .learning-course-family,
+.learning-course-tab.is-active .learning-course-check { color: var(--on-accent); }
+.learning-course-check { border-color: currentColor; }
+[data-theme="dark"] .learning-course-tab.is-active strong,
+[data-theme="dark"] .learning-course-tab.is-active .learning-course-family,
+[data-theme="dark"] .learning-course-tab.is-active .learning-course-check { color: var(--on-accent); }
+[data-theme="dark"] .exam-sticker { color: #1d523d; }
+.learning-filter.is-active small { color: #415b35; }
+[data-theme="dark"] .learning-filter.is-active small { color: #d0dfc1; }
+[data-theme="dark"] .skip-link,
+[data-theme="dark"] .exam-toggle button.is-active,
+[data-theme="dark"] .exam-switch button.is-selected { color: var(--on-accent); }
+@media (min-width: 1181px) { [data-theme="dark"] .main-nav { background: transparent; } }
+[data-theme="dark"] .btn-primary, [data-theme="dark"] .btn-primary:hover {
+    background: var(--green);
+    color: var(--on-accent);
+}
+[data-theme="dark"] .btn-outline, [data-theme="dark"] .btn-secondary { color: var(--green); border-color: var(--line); }
+[data-theme="dark"] .btn-outline:hover, [data-theme="dark"] .btn-secondary:hover { background: var(--surface-alt); }
+[data-theme="dark"] .cta-section,
+[data-theme="dark"] .learning-full-mock { background: #244f39; color: #edf3e9; }
+[data-theme="dark"] .cta-section h2,
+[data-theme="dark"] .learning-full-mock h2 { color: #edf3e9; }
+[data-theme="dark"] .cta-section p,
+[data-theme="dark"] .cta-section .eyebrow,
+[data-theme="dark"] .learning-full-mock p,
+[data-theme="dark"] .learning-full-facts { color: #d2dfc9; }
+[data-theme="dark"] .btn-lime { background: #dceba9; color: #173423; }
+[data-theme="dark"] .small-wins { background: #244f39; color: #edf3e9; }
+[data-theme="dark"] .stat-card:first-child { background: #244f39; border-color: #46674c; color: #edf3e9; }
+[data-theme="dark"] .stat-card:first-child .stat-value { color: #edf3e9; }
+[data-theme="dark"] .stat-card:first-child .stat-label,
+[data-theme="dark"] .stat-card:first-child .stat-helper { color: #cfdfc5; }
+[data-theme="dark"] .exam-choice.is-selected,
+[data-theme="dark"] .question-option.is-selected,
+[data-theme="dark"] .learning-filter.is-active { background: #344d32; border-color: #a5c385; color: #edf3e9; }
+[data-theme="dark"] .exam-choice.is-selected .exam-option-letter,
+[data-theme="dark"] .is-selected .option-letter { background: #b7d99a; color: #172316; }
+[data-theme="dark"] .exam-question-map button.is-current,
+[data-theme="dark"] .question-jump .is-current { background: #b7d99a; color: #172316; }
+[data-theme="dark"] .exam-diagram-graphic { background: var(--surface); border-color: var(--line); }
+[data-theme="dark"] .exam-plot text, [data-theme="dark"] .exam-diagram-graphic text { fill: var(--ink); }
+[data-theme="dark"] .exam-diagram-graphic rect { fill: var(--surface-alt); stroke: #94b483; }
+[data-theme="dark"] .exam-diagram-graphic line { stroke: #94b483; }
+[data-theme="dark"] .exam-diagram-graphic marker path { fill: #94b483; }
+[data-theme="dark"] .form-error { background: #442e27; border-color: #a86d55; color: #ffd6c4; }
+[data-theme="dark"] .form-success { background: #2c402c; border-color: #6e875c; color: #d5efbf; }
+[data-theme="dark"] .exam-dialog::backdrop,
+[data-theme="dark"] .practice-dialog::backdrop { background: #07110cd1; }
+[data-theme="dark"] input, [data-theme="dark"] select, [data-theme="dark"] textarea {
+    color: var(--ink);
+    background-color: var(--surface);
+    border-color: var(--line);
+}
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder { color: #a4b29d; }
+[data-theme="dark"] input[type="radio"],
+[data-theme="dark"] input[type="checkbox"] { accent-color: #b7d99a; }
+[data-theme="dark"] .exam-ai-panel,
+[data-theme="dark"] .exam-ai-review,
+[data-theme="dark"] .exam-ai-feedback { background: var(--surface-alt); border-color: var(--line); color: var(--ink); }
+[data-theme="dark"] .exam-ai-panel p,
+[data-theme="dark"] .exam-ai-review p,
+[data-theme="dark"] .exam-ai-feedback p { color: var(--muted); }
+@media (max-width: 1180px) {
+    .main-nav {
+        display: none;
+        position: absolute;
+        top: calc(100% - 8px);
+        left: 20px;
+        right: 20px;
+        padding: 22px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: 0 15px 35px #12251b14;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 22px;
+    }
+    .main-nav.is-open { display: flex; }
+    .main-nav a { font-size: 16px; }
+    .main-nav a[aria-current="page"]::after { display: none; }
+    .menu-toggle { display: block; min-height: 44px; min-width: 40px; }
+    .nav-actions { margin-left: auto; }
+    .nav-actions .btn { font-size: 14px; }
+}
+@media (max-width: 900px) {
+    .hero-description { font-size: 16px; }
+    .hero-actions { flex-wrap: wrap; }
+    .hero-actions .btn, .hero-secondary { font-size: 15px; }
+    .hero-reassurance { font-size: 13px; }
+    .goal-card { left: -8px; bottom: 34px; }
+    .goal-card strong { font-size: 13px; }
+    .goal-card small { font-size: 11px; }
+    .exam-sticker { width: 107px; height: 107px; }
+    .exam-sticker > span { font-size: 10px; }
+    .photo-caption { font-size: 11px; }
+    .skill-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .skill-card { min-height: 285px; }
+    .learning-section-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 700px) {
+    .theme-toggle { width: 44px; padding: 10px; }
+    .theme-toggle-label { display: none; }
+    .nav-wrap { gap: 9px; }
+    .nav-actions { gap: 9px; }
+    .nav-actions .login-link { font-size: 14px; }
+    .nav-actions .btn { font-size: 14px; padding: 10px 13px; min-height: 44px; gap: 7px; }
+    .hero-actions { gap: 17px; }
+    .hero-actions .btn { font-size: 15px; }
+    .hero-secondary { font-size: 15px; }
+    .goal-card { bottom: 38px; }
+    .hero-visual { margin-bottom: 20px; }
+    .exam-sticker { right: -12px; }
+    .handwritten-note { bottom: -13px; }
+    .journey-card { padding: 23px 21px; }
+    .journey-card > p { font-size: 13px; }
+    .journey-top { font-size: 11px; }
+    .small-wins { bottom: -20px; }
+    .belief-strip .container { row-gap: 9px; }
+    .belief-strip .container > span { font-size: 15px; }
+    .belief-strip .container > div { font-size: 13px; }
+    .cta-section p, .cta-section > .btn { font-size: 15px; }
+    .footer-brand-block { align-items: flex-start; flex-wrap: wrap; }
+    .footer-brand-block > p { font-size: 14px; }
+    .footer-links > span { font-size: 12px; }
+    .footer-links > a { font-size: 15px; }
+    .footer-bottom { font-size: 13px; }
+    .learning-course-tab { min-height: 95px; padding: 16px 14px; }
+    .learning-course-tab strong { font-size: 17px; }
+    .learning-course-family { font-size: 13px; }
+    .learning-course-check { right: 9px; }
+    .learning-filter { font-size: 14px; }
+    .learning-filter small { font-size: 13px; }
+    .learning-module { min-height: 310px; }
+    .learning-module h3 { font-size: 22px; }
+    .learning-module > p { font-size: 16px; }
+    .learning-search-form { gap: 9px; padding-left: 14px; }
+    .learning-search-form > button { font-size: 14px; padding: 11px; gap: 7px; }
+    .learning-good-to-know h3 { font-size: 17px; }
+    .learning-good-to-know p { font-size: 16px; }
+    .learning-full-mock .eyebrow { font-size: 12px; }
+    .learning-full-mock > div > p:not(.eyebrow) { font-size: 16px; }
+    .learning-full-facts { font-size: 14px; }
+    .learning-full-mock > .btn { font-size: 15px; }
+    .auth-lead { font-size: 16px; }
+    .auth-shell.container { padding-inline: 0; grid-template-columns: minmax(0, 1fr); }
+    .auth-shell > * { min-width: 0; }
+    .form-submit { white-space: normal; }
+    .dashboard-grid { grid-template-columns: 1fr; }
+    .stat-card { min-height: 125px; padding: 21px; }
+    .stat-label { font-size: 15px; }
+    .stat-helper { font-size: 14px; }
+    .practice-paths { grid-template-columns: 1fr; }
+    .practice-path-card { min-height: 230px; }
+    .practice-path-card p { font-size: 16px; }
+}
+@media (max-width: 420px) {
+    .brand { font-size: 25px; gap: 5px; }
+    .brand > svg { width: 26px; }
+    .nav-wrap, .nav-actions { gap: 6px; }
+    .nav-actions > .btn { display: none; }
+    .nav-mobile-account { display: block; color: var(--green); font-weight: 650; }
+    .nav-actions .login-link { display: block; max-width: 78px; text-align: center; line-height: 1.25; }
+    .theme-toggle { min-width: 42px; width: 42px; }
+    .menu-toggle { min-width: 34px; padding: 5px; }
+    .skill-grid { grid-template-columns: 1fr; }
+    .skill-card { min-height: 255px; padding: 24px; }
+    .skill-card h3 { font-size: 23px; }
+    .hero h1 { font-size: 36px; }
+    .hero h1 > span { white-space: normal; }
+    .hero-actions .btn { font-size: 15px; }
+    .hero .eyebrow { font-size: 12px; }
+    .hero-description { font-size: 16px; }
+    .hero-reassurance { font-size: 12px; }
+    .exam-sticker { width: 96px; height: 96px; right: -5px; }
+    .exam-sticker > span { font-size: 9px; }
+    .goal-card { left: -9px; padding: 11px; }
+    .goal-icon { display: none; }
+    .photo-caption { font-size: 10px; left: 8px; right: 8px; }
+    .learning-intro h1 { font-size: 35px; }
+    .learning-course-tab { padding: 13px 11px; }
+    .learning-course-tab strong { font-size: 16px; padding-right: 9px; }
+    .learning-course-check { right: 6px; height: 14px; width: 14px; }
+    .learning-course-family { font-size: 12px; letter-spacing: .3px; }
+    .learning-grid-heading { align-items: flex-start; flex-direction: column; gap: 9px; }
+    .learning-section-grid { grid-template-columns: 1fr; }
+    .learning-search-form > button > svg { display: none; }
+}
+@media print {
+    :root[data-theme="dark"] { color-scheme: light; --paper: #ffffff; --ink: #26352c; --muted: #596451; --line: #cbd2c3; --surface: #ffffff; --surface-alt: #f3f5ef; --green: #1d523d; }
+    .theme-toggle { display: none; }
+    body { background: #fff !important; color: #26352c !important; }
+}
