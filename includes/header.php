@@ -32,7 +32,7 @@ $student = current_user();
         <nav class="main-nav" id="main-nav" aria-label="Main navigation">
             <a href="index.php" <?= $activePage === 'home' ? 'aria-current="page"' : '' ?>>Home</a>
             <a href="exams.php" <?= $activePage === 'exams' ? 'aria-current="page"' : '' ?>>Full mock exams</a>
-            <a href="practice.php" <?= $activePage === 'practice' ? 'aria-current="page"' : '' ?>>Practice tests</a>
+            <a href="practice.php" <?= $activePage === 'practice' ? 'aria-current="page"' : '' ?>>Practice library</a>
             <a href="index.php#how-it-works">How it works</a>
         </nav>
         <div class="nav-actions">

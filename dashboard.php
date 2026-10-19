@@ -18,9 +18,22 @@ try {
     $resultsUnavailable = true;
 }
 try {
-    $statement = db()->prepare('SELECT id, exam_name, exam, objective_score, objective_total, elapsed_seconds, assisted, created_at FROM exam_runs WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 10');
+    $statement = db()->prepare('SELECT id, exam_name, exam, result_json, objective_score, objective_total, elapsed_seconds, assisted, created_at FROM exam_runs WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 10');
     $statement->execute([$user['id']]);
     $mockRuns = $statement->fetchAll();
+    foreach ($mockRuns as $index => $mockRun) {
+        try {
+            $storedResult = json_decode((string) $mockRun['result_json'], true, 32, JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            $storedResult = [];
+        }
+        $sessionType = is_array($storedResult) ? ($storedResult['session_type'] ?? 'full') : 'full';
+        $mockRuns[$index]['session_label'] = match ($sessionType) {
+            'practice' => 'Practice',
+            'section' => 'Sectional mock',
+            default => 'Full mock',
+        };
+    }
 } catch (Throwable $exception) {
     $mockHistoryUnavailable = true;
 }
@@ -43,7 +56,7 @@ require __DIR__ . '/includes/header.php';
         </div>
         <div class="account-actions">
             <a class="btn btn-primary" href="practice.php">Start practicing <span aria-hidden="true">→</span></a>
-            <a class="btn btn-outline" href="exams.php">Take a full mock</a>
+            <a class="btn btn-outline" href="exams.php">Explore practice and mocks</a>
             <form method="post" action="logout.php"><?= csrf_field() ?><button type="submit" class="btn btn-outline">Sign out</button></form>
         </div>
     </div>
@@ -108,29 +121,30 @@ require __DIR__ . '/includes/header.php';
     </div>
     <section class="dashboard-panel mock-history" aria-labelledby="mock-history-heading">
         <div class="panel-heading">
-            <div><h2 id="mock-history-heading">Your full mock exams</h2><p>Last 10 saved submissions · raw practice points</p></div>
-            <a href="exams.php">Explore full mocks <span aria-hidden="true">→</span></a>
+            <div><h2 id="mock-history-heading">Your practice and mock history</h2><p>Last 10 saved submissions · raw practice points</p></div>
+            <a href="exams.php">Explore practice and mocks <span aria-hidden="true">→</span></a>
         </div>
         <?php if ($mockHistoryUnavailable): ?>
-            <div class="setup-notice" role="status">Your full mock history is temporarily unavailable. You can still take a full mock and review your result.</div>
+            <div class="setup-notice" role="status">Your practice and mock history is temporarily unavailable. You can still complete a session and review your result.</div>
         <?php elseif ($mockRuns === []): ?>
             <div class="empty-state">
-                <span class="eyebrow">MAKE ROOM FOR THE FULL EXPERIENCE</span>
-                <h3>Get comfortable with the whole exam.</h3>
-                <p>Try a timed IELTS or PTE mock. Your saved results and answer reviews will appear here.</p>
-                <a class="btn btn-primary" href="exams.php">Choose a full mock <span aria-hidden="true">→</span></a>
+                <span class="eyebrow">BUILD YOUR CONFIDENCE</span>
+                <h3>Make time for your next step.</h3>
+                <p>Choose IELTS or PTE practice, a sectional mock, or a full mock. Save your result to see your progress and answer reviews here.</p>
+                <a class="btn btn-primary" href="exams.php">Choose a practice session <span aria-hidden="true">→</span></a>
             </div>
         <?php else: ?>
             <p class="mock-history-note">Objective tasks earn raw practice points. Writing and speaking are ungraded and need self-review. Assisted submissions may use transcripts or replay support.</p>
             <div class="attempts-table-wrap">
                 <table class="attempts-table mock-history-table">
-                    <caption class="sr-only">Your ten most recent saved full mock exam results. Scores are raw practice points, not official exam scores.</caption>
-                    <thead><tr><th scope="col">Full mock</th><th scope="col">Practice points</th><th scope="col">Time spent</th><th scope="col">Date (UTC)</th><th scope="col">Review</th></tr></thead>
+                    <caption class="sr-only">Your ten most recent saved practice and mock results. Scores are raw practice points, not official exam scores.</caption>
+                    <thead><tr><th scope="col">Session</th><th scope="col">Practice points</th><th scope="col">Time spent</th><th scope="col">Date (UTC)</th><th scope="col">Review</th></tr></thead>
                     <tbody>
                     <?php foreach ($mockRuns as $mockRun): ?>
                         <tr>
                             <td>
                                 <span class="exam-tag <?= $mockRun['exam'] === 'PTE' ? 'pte' : 'ielts' ?>"><?= e($mockRun['exam']) ?></span>
+                                <span class="muted"><?= e($mockRun['session_label']) ?></span>
                                 <?php if ((bool) $mockRun['assisted']): ?><span class="mock-assisted">Assisted</span><?php endif; ?>
                                 <br><a class="mock-name" href="exams.php?result=<?= (int) $mockRun['id'] ?>"><?= e($mockRun['exam_name']) ?></a>
                             </td>

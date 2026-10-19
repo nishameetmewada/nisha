@@ -6,17 +6,22 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 
 - A responsive, original NISHA landing page and mobile navigation.
 - Registration, login, session-based student accounts, and a private dashboard.
-- IELTS and PTE reading and listening: original six-question sets, timer, question navigation, answer explanations, retries, and saved quiz results for signed-in students.
-- Writing prompts with a word count, reflection checklist, and text download.
-- Speaking prompts with optional browser microphone recording, playback, and download. Recordings never upload to the server.
-- Full IELTS Academic mock: 40 listening and 40 reading questions, both writing tasks, and three speaking parts.
-- Full PTE Academic mock: 68 items covering 22 section-qualified formats, including group discussion and situation responses.
-- Timed sections, resumed browser sessions, server-marked objective answers, reflection rubrics, and saved full-mock reports.
-- A MySQL schema for users, short practice history, and full-mock reports.
+- A searchable practice library for IELTS Academic, IELTS General Training, PTE Academic and PTE Core, with skill filters and question-type exercises.
+- Untimed guided sessions with server-checked answers, explanations and writing/speaking self-review checklists.
+- Timed sectional mocks for every full-exam section, plus four complete original mocks.
+- Each IELTS mock: 40 listening and 40 reading questions, two writing tasks and three speaking parts.
+- PTE Academic: 68 tasks across 22 question types. PTE Core: 60 tasks across 19 question types.
+- Interactive choices, typed and dropdown gaps, matching, paragraph ordering, incorrect-word selection, writing and optional microphone recording.
+- Original passages, audio scripts, charts, tables, maps and process diagrams.
+- Device autosave, resumed sessions, server marking, and private account history for guided, sectional and full attempts.
+- An optional legacy quick studio at `quick-practice.php`, with short six-question activities.
+- A MySQL schema for users, short practice history, and complete reports.
 
-Short skill exercises and full-length independent Academic mocks are both included. The IELTS mock uses 164 minutes across its combined practice sequence; the PTE mock uses 140 minutes. These are NISHA mock budgets, not exact guarantees of current test-centre timing. Objective tasks report practice points rather than official exam scores. Writing and speaking have no automated marking. NISHA is an independent practice platform and is not affiliated with IELTS or Pearson PTE. The homepage's growth illustration is decorative, not a real student's results. The hero portrait was generated for this website.
+The configured full mock budgets are 164 minutes for each IELTS version, 140 minutes for PTE Academic and 120 minutes for PTE Core. These are NISHA learning choices; real test counts and delivery arrangements vary. Objective tasks report raw practice points. Writing and speaking use self-review, without automated proficiency scores. Listening uses browser speech rather than professional test recordings. Some same-format questions are shared between course variants and practice modes, as disclosed in the catalogue.
 
-For full exam formats, timing, audio limitations, privacy, scoring, and upgrade instructions, read [Full mock exams](docs/full-mock-exams.md). For browser warnings on a deployed site, see [Deployment security checks](docs/deployment-security.md).
+NISHA is an independent practice platform and is not affiliated with IELTS, Pearson PTE or Language Academy. All questions and interface assets are original or locally licensed. The homepage's growth illustration is decorative, not a real student's results. The hero portrait was generated for this website.
+
+For full exam formats, timing, audio limitations, privacy, scoring, and upgrade instructions, read [Full mock exams](docs/full-mock-exams.md) and [Practice library coverage](docs/practice-library.md). For browser warnings on a deployed site, see [Deployment security checks](docs/deployment-security.md).
 
 ## Put it on Hostinger
 
@@ -72,21 +77,25 @@ The prepared cloud instance retains PHP and MariaDB tools outside this repositor
 | `index.php` | Landing page copy and sections |
 | `assets/css/style.css` | Shared design and responsive landing page |
 | `includes/header.php`, `includes/footer.php` | Shared navigation and footer |
-| `includes/practice-data.php` | Original practice sets, prompts, and explanations |
-| `assets/js/practice.js` | Interactive practice behavior |
+| `practice.php`, `assets/js/learning.js`, `assets/css/learning.css` | Searchable course and question-type library |
+| `includes/learning-catalog.php` | Canonical modules and generated practice/section definitions |
+| `includes/practice/ielts-modules.php` | Additional original IELTS question-type exercises |
+| `quick-practice.php`, `includes/practice-data.php`, `assets/js/practice.js` | Legacy short studio |
 | `includes/exams/` | Original full exam content |
-| `exams.php`, `assets/js/exams.js` | Full exam room and timed runner |
+| `exams.php`, `assets/js/exams.js` | Shared guided, sectional and full exam room |
+| `api/practice-feedback.php` | Practice-only answer checks |
 | `includes/exam-grading.php` | Server-side practice marking |
 | `database/schema.sql` | Database tables |
 | `database/migrations/002_full_exams.sql` | Add full mock history to an existing installation |
 | `config/config.php` | Your private server settings; ignored by Git |
 
-Add more original practice sets by extending the practice data and studio selector together. The short studio has one six-question set per exam and objective skill (24 questions total). Short-studio answers are delivered to the browser for instant practice feedback. Full mocks keep answer keys on the server until final marking. Neither path is a secure proctored assessment.
+Add content through the canonical exam files or the supplemental module bank; see [Practice contract](docs/practice-contract.md). Module counts and launch IDs are generated from actual content. New guided practice keeps answer keys on the server and checks only the requested item. Timed sections and full mocks reveal answers at final submission. The optional legacy studio delivers its short answer keys to the browser. These are learning exercises, not secure proctored assessments.
 
 ## Readiness checks
 
 - Check PHP syntax: `find . -name '*.php' -not -path './config/config.php' -exec php -l {} \;`.
-- Run `php tests/exam-integrity.php` for full-exam content and marking regression checks.
+- Run `php tests/exam-integrity.php` and `php tests/learning-integrity.php` for content, coverage, generated-session and marking checks.
+- Run `node tests/exam-browser-smoke.js` and `node tests/learning-browser-smoke.js` against the local PHP server with Playwright and Chromium installed; see `tests/README.md`.
 - Load the home, registration, login, practice, and full mock pages at desktop and mobile widths.
 - Test full-mock resume, section expiry, forward-only PTE navigation, server submission, and saved history.
 - Register, sign out, sign in, complete a quiz, and confirm the dashboard result survives a new login.

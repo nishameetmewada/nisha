@@ -38,13 +38,13 @@ function nisha_validate_exam_submission(array $exam, array $payload): array
         throw new InvalidArgumentException('Send the exam ID and version, attempt ID, answers, elapsed time, completed sections, and assisted setting.');
     }
     if (($payload['exam_id'] ?? null) !== $exam['id']) {
-        throw new InvalidArgumentException('Choose a known mock exam.');
+        throw new InvalidArgumentException('Choose a known practice session or mock exam.');
     }
     if (!nisha_valid_text($payload['exam_version'], 100) || $payload['exam_version'] === '') {
-        throw new InvalidArgumentException('Send the version of the mock you started.');
+        throw new InvalidArgumentException('Send the version of the session you started.');
     }
     if ($payload['exam_version'] !== ($exam['version'] ?? null)) {
-        throw new ExamVersionConflictException('This mock has been updated since you started. Download your local answers, then start a new attempt with the updated mock.');
+        throw new ExamVersionConflictException('This session has been updated since you started. Download your local answers, then start a new attempt with the updated content.');
     }
     if (!is_string($payload['attempt_id']) || !preg_match('/\A[A-Za-z0-9][A-Za-z0-9_-]{15,79}\z/D', $payload['attempt_id'])) {
         throw new InvalidArgumentException('Use a unique attempt ID containing 16–80 letters, numbers, hyphens or underscores.');
@@ -176,16 +176,32 @@ function nisha_has_response(mixed $response): bool
     return is_string($response) && trim(preg_replace('/\s+/u', ' ', $response) ?? '') !== '';
 }
 
+/** Answer-free item context for reviewing saved sessions after content changes. */
+function nisha_review_item_snapshot(array $item): array
+{
+    $snapshot = [];
+    foreach ($item as $key => $value) {
+        if (in_array($key, ['answer', 'explanation', 'correct_text'], true)) {
+            continue;
+        }
+        $snapshot[$key] = is_array($value) ? nisha_review_item_snapshot($value) : $value;
+    }
+    return $snapshot;
+}
+
 /** Return only original practice points, never official bands or PTE scores. */
 function nisha_grade_exam(array $exam, array $submission): array
 {
     $result = [
         'exam_id' => $exam['id'], 'name' => $exam['name'], 'exam' => $exam['exam'],
+        'session_type' => $exam['session_type'] ?? 'full', 'course_id' => $exam['course_id'] ?? null,
+        'module_id' => $exam['module_id'] ?? null, 'timing_mode' => $exam['timing_mode'] ?? 'timed',
         'exam_version' => $exam['version'] ?? '', 'attempt_id' => $submission['attempt_id'],
         'elapsed_seconds' => $submission['elapsed_seconds'], 'assisted' => $submission['assisted'],
         'completed_sections' => $submission['completed_sections'],
         'objective_score' => 0, 'objective_total' => 0, 'answered_items' => 0, 'total_items' => 0,
         'sections' => [], 'review' => [], 'responses' => $submission['answers'],
+        'resources' => $exam['resources'] ?? [],
         'grading_note' => 'Raw practice points only; writing/speaking require self-review. These are not official IELTS band scores or PTE scores.',
     ];
     foreach ($exam['sections'] as $section) {
@@ -261,6 +277,11 @@ function nisha_grade_exam(array $exam, array $submission): array
                 'response' => $response, 'correct_answer' => $correct, 'score' => $score, 'max_score' => $maximum,
                 'explanation' => $item['explanation'] ?? 'This response is ungraded. Use the self-review checklist to reflect on your response.',
                 'graded' => $graded, 'rubric' => $item['rubric'] ?? [],
+                'title' => $item['title'] ?? '', 'instructions' => $item['instructions'] ?? '',
+                'options' => $item['options'] ?? [], 'text' => $item['text'] ?? '',
+                'resource_id' => $item['resource_id'] ?? null,
+                'secondary_resource_id' => $item['secondary_resource_id'] ?? null,
+                'item_snapshot' => nisha_review_item_snapshot($item),
             ];
             if ($type === 'highlight' && isset($item['correct_text'])) {
                 $review['correct_text'] = $item['correct_text'];

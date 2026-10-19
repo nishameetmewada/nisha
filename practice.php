@@ -1,107 +1,136 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
-$pageTitle = 'Practice studio';
+require_once __DIR__ . '/includes/learning-catalog.php';
+
+$learningCourses = nisha_learning_catalog();
+$learningById = array_column($learningCourses, null, 'id');
+$learningLegacy = is_string($_GET['exam'] ?? null) ? strtolower($_GET['exam']) : '';
+$learningRequested = is_string($_GET['course'] ?? null) ? $_GET['course'] : '';
+$learningCourseId = isset($learningById[$learningRequested]) ? $learningRequested : ($learningLegacy === 'pte' ? 'pte-academic' : 'ielts-academic');
+if (!isset($learningById[$learningCourseId])) $learningCourseId = array_key_first($learningById);
+$learningActiveCourse = $learningById[$learningCourseId];
+$learningSkill = is_string($_GET['skill'] ?? null) ? strtolower($_GET['skill']) : 'all';
+if (!in_array($learningSkill, ['all', 'reading', 'listening', 'writing', 'speaking', 'speaking-writing'], true)) $learningSkill = 'all';
+$learningQuery = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
+$learningSkillNames = ['all' => 'All skills', 'listening' => 'Listening', 'reading' => 'Reading', 'writing' => 'Writing', 'speaking' => 'Speaking', 'speaking-writing' => 'Speaking & writing'];
+
+function learning_normalize(string $text): string
+{
+    return trim(strtolower((string) preg_replace('/[^\p{L}\p{N}]+/u', ' ', $text)));
+}
+
+function learning_module_description(array $module): string
+{
+    $title = strtolower($module['title']);
+    if (str_contains($title, 'read aloud')) return 'Bring a written passage to life with clear, natural phrasing.';
+    if (str_contains($title, 'repeat sentence')) return 'Listen for meaning, hold it in mind and repeat what you hear.';
+    if (str_contains($title, 'describe image')) return 'Find the main patterns and put the visual details into words.';
+    if (str_contains($title, 'reorder') || str_contains($title, 're-order')) return 'Follow the logic and put the paragraphs into a meaningful order.';
+    if (str_contains($title, 'incorrect words')) return 'Compare what you hear with what you read. Spot the differences.';
+    if (str_contains($title, 'dictation')) return 'Listen closely, then capture the sentence accurately in writing.';
+    if (str_contains($title, 'headings')) return 'Find the main idea that holds each paragraph together.';
+    if (str_contains($title, 'true') || str_contains($title, 'yes / no')) return 'Separate what the text tells you from what it leaves open.';
+    if (str_contains($title, 'blank') || str_contains($title, 'completion')) return 'Use context and key details to find the missing information.';
+    if (str_contains($title, 'summari') || str_contains($title, 'summary')) return 'Find the central ideas and focus on what matters most.';
+    if (str_contains($title, 'essay')) return 'Give your ideas a clear direction, with reasons and examples.';
+    if (str_contains($title, 'respond to') || str_contains($title, 'situation')) return 'Choose a helpful tone and communicate a practical response.';
+    if (str_contains($title, 'matching')) return 'Connect the clues and match each detail with the right idea.';
+    return match ($module['skill']) {
+        'reading' => 'Read with purpose and find the evidence behind your answer.',
+        'listening' => 'Tune in to the main ideas and the details that make a difference.',
+        'writing' => 'Organise your thoughts and make your message easy to follow.',
+        'speaking', 'speaking-writing' => 'Build a response that sounds clear, considered and your own.',
+        default => 'Give one question type your full attention, one item at a time.',
+    };
+}
+
+function learning_search_text(array $module): string
+{
+    $aliases = str_contains(strtolower($module['title']), 'blank') ? 'FIB gap fill missing words' : '';
+    if (str_contains(strtolower($module['title']), 'choice')) $aliases .= ' MCQ multiple choice';
+    return learning_normalize($module['title'] . ' ' . $module['skill'] . ' ' . learning_module_description($module) . ' ' . $aliases);
+}
+
+function learning_matches(array $module, string $skill, string $query): bool
+{
+    if ($skill !== 'all' && $module['skill'] !== $skill && !($skill === 'speaking-writing' && in_array($module['skill'], ['speaking', 'writing'], true))) return false;
+    $search = learning_search_text($module);
+    foreach (preg_split('/\s+/u', learning_normalize($query), -1, PREG_SPLIT_NO_EMPTY) as $term) if (!str_contains($search, $term)) return false;
+    return true;
+}
+
+function learning_url(string $course, string $skill = 'all', string $query = ''): string
+{
+    return 'practice.php?' . http_build_query(array_filter(['course' => $course, 'skill' => $skill !== 'all' ? $skill : '', 'q' => $query], static fn($value) => $value !== ''));
+}
+
+function learning_launch(string $id): string
+{
+    return 'exams.php?' . http_build_query(['exam' => $id, 'start' => '1']);
+}
+
+$learningVisibleCount = count(array_filter($learningActiveCourse['modules'], static fn($module) => learning_matches($module, $learningSkill, $learningQuery)));
+$pageTitle = 'Your practice library';
+$pageDescription = 'Find your focus with the NISHA practice library. Explore IELTS Academic, IELTS General Training, PTE Academic and PTE Core question types, section tests and full mocks.';
 $activePage = 'practice';
-$extraStyles = ['assets/css/practice.css'];
-$extraScripts = ['assets/js/practice.js'];
-$practiceData = require __DIR__ . '/includes/practice-data.php';
-$practiceSignedIn = current_user() !== null;
+$extraStyles = ['assets/css/learning.css'];
+$extraScripts = ['assets/js/learning.js'];
 include __DIR__ . '/includes/header.php';
+$learningIconMap = ['reading' => 'book', 'listening' => 'headphones', 'writing' => 'pen', 'speaking' => 'mic', 'speaking-writing' => 'mic'];
 ?>
-<main class="practice-page" id="main">
-    <div class="container practice-container">
-        <section id="practice-setup" aria-labelledby="practice-title">
-            <div class="practice-intro">
-                <div>
-                    <p class="eyebrow"><span class="practice-spark" aria-hidden="true">✳</span> YOUR DAILY DOSE OF PROGRESS</p>
-                    <h1 id="practice-title">A little practice.<br><span>A lot more possibility.</span></h1>
-                    <p class="practice-lead">A space to try, learn and try again. Build your IELTS or PTE skills, one focused session at a time.</p>
-                </div>
-                <div class="practice-intro-note">
-                    <span class="practice-note-icon" aria-hidden="true">→</span>
-                    <strong>Progress starts<br>with showing up.</strong>
-                    <span>You’ve already taken the first step.</span>
-                </div>
-            </div>
+<main id="main" class="learning-page">
+    <div class="container">
+        <div class="learning-intro">
+            <div><p class="eyebrow"><span class="learning-live-dot" aria-hidden="true"></span> YOUR PRACTICE LIBRARY</p><h1>A little focus.<br><span>A world of progress.</span></h1><p>Find the practice that fits your next step. Choose your course, explore a skill and make a little more room for confidence.</p></div>
+            <aside class="learning-intro-note" aria-label="A little encouragement"><span class="learning-note-spark" aria-hidden="true"><?= icon('spark', '', 29) ?></span><p>Big dreams.<br>Small, steady steps.</p><span>Let’s take the next one together.</span><div class="learning-note-leaves" aria-hidden="true"><svg viewBox="0 0 84 90" fill="none"><path d="M40 87V26M40 60C14 61 9 46 11 27c22-1 32 11 29 33Zm0-18C39 20 54 9 75 11c1 21-13 35-35 34Z" fill="currentColor"/><path d="m20 37 20 23m24-38L40 46" stroke="#edf1df" stroke-width="2"/></svg></div></aside>
+        </div>
 
-            <aside class="studio-fullmock-banner" aria-label="Full-length exam practice"><div><span class="eyebrow">READY FOR THE WHOLE EXPERIENCE?</span><h2>Step into the full exam room.</h2><p>Longer passages, realistic task formats, and timed sections for IELTS Academic and PTE Academic.</p></div><a class="btn btn-primary" href="exams.php">Explore full mock exams <span aria-hidden="true">→</span></a></aside>
-            <div class="practice-studio">
-                <div class="practice-studio-heading">
-                    <div><p class="eyebrow">THE PRACTICE STUDIO</p><h2>Make this session yours.</h2></div>
-                    <div class="exam-switch" role="group" aria-label="Choose your exam">
-                        <button type="button" data-exam="IELTS" aria-pressed="true" class="is-selected">IELTS</button>
-                        <button type="button" data-exam="PTE" aria-pressed="false">PTE</button>
+        <nav class="learning-course-tabs" id="learning-course-tabs" aria-label="Choose your course">
+            <?php foreach ($learningCourses as $course): ?>
+            <a href="<?= e(learning_url($course['id'])) ?>" data-course-id="<?= e($course['id']) ?>" class="learning-course-tab<?= $course['id'] === $learningCourseId ? ' is-active' : '' ?>" <?= $course['id'] === $learningCourseId ? 'aria-current="page"' : '' ?>><span class="learning-course-family"><?= e($course['exam']) ?></span><strong><?= e(str_replace($course['exam'] . ' ', '', $course['name'])) ?></strong><span class="learning-course-check" aria-hidden="true"><?= icon('check', '', 12) ?></span></a>
+            <?php endforeach; ?>
+        </nav>
+
+        <section class="learning-library" aria-labelledby="learning-library-title">
+            <div class="learning-library-heading"><div><p class="eyebrow">START SMALL. GO A LITTLE FURTHER.</p><h2 id="learning-library-title"><?= e($learningActiveCourse['name']) ?></h2><p id="learning-course-description"><?= e($learningActiveCourse['description']) ?></p></div><a href="#learning-sectionals" class="learning-subtle-link">Looking for a timed test? <?= icon('arrow', '', 16) ?></a></div>
+            <form class="learning-search-form" id="learning-search-form" action="practice.php" method="get" role="search" aria-label="Find a practice question type"><input type="hidden" name="course" id="learning-course-input" value="<?= e($learningCourseId) ?>"><input type="hidden" name="skill" id="learning-skill-input" value="<?= e($learningSkill) ?>"><label for="learning-search" class="learning-sr-only">Search question types</label><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" width="19" height="19" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5" stroke-linecap="round"/></svg><input type="search" id="learning-search" name="q" value="<?= e($learningQuery) ?>" placeholder="Find your focus: read aloud, matching, fill in the blanks…" autocomplete="off" maxlength="160"><button type="submit">Search <?= icon('arrow', '', 15) ?></button></form>
+            <nav class="learning-skill-filters" id="learning-skill-filters" aria-label="Filter by skill">
+                <?php foreach ($learningSkillNames as $skillId => $skillName): ?>
+                <?php $skillCount = count(array_filter($learningActiveCourse['modules'], static fn($module) => learning_matches($module, $skillId, ''))); ?>
+                <a href="<?= e(learning_url($learningCourseId, $skillId, $learningQuery)) ?>" data-skill="<?= e($skillId) ?>" class="learning-filter<?= $learningSkill === $skillId ? ' is-active' : '' ?>" <?= $learningSkill === $skillId ? 'aria-current="true"' : '' ?> <?= $skillId !== 'all' && $skillCount === 0 ? 'hidden' : '' ?>><?php if ($skillId !== 'all'): ?><?= icon($learningIconMap[$skillId] ?? 'book', '', 14) ?><?php endif; ?><span><?= e($skillName) ?></span><small><?= $skillCount ?></small></a>
+                <?php endforeach; ?>
+            </nav>
+            <div class="learning-grid-heading"><p><strong>Question type practice</strong><span>Untimed sessions, with room to learn.</span></p><span id="learning-result-count" role="status" aria-live="polite" aria-atomic="true"><?= $learningVisibleCount ?> <?= $learningVisibleCount === 1 ? 'question type' : 'question types' ?></span></div>
+            <div id="learning-empty" class="learning-empty" <?= $learningVisibleCount > 0 ? 'hidden' : '' ?>><span aria-hidden="true"><?= icon('spark', '', 29) ?></span><h3>A fresh focus is only a search away.</h3><p>No question types match these filters. Try another word or explore all the skills in this course.</p><a href="<?= e(learning_url($learningCourseId)) ?>" id="learning-clear-filters" class="btn btn-outline">Clear filters <?= icon('arrow', '', 16) ?></a></div>
+
+            <?php foreach ($learningCourses as $course): ?>
+            <div class="learning-course-panel" data-course="<?= e($course['id']) ?>" id="learning-panel-<?= e($course['id']) ?>" <?= $course['id'] !== $learningCourseId ? 'hidden' : '' ?>>
+                <div class="learning-module-grid">
+                    <?php foreach ($course['modules'] as $module): ?>
+                    <article class="learning-module learning-module-<?= e($module['skill']) ?>" data-skill="<?= e($module['skill']) ?>" data-search="<?= e(learning_search_text($module)) ?>" <?= !learning_matches($module, $learningSkill, $learningQuery) ? 'hidden' : '' ?>>
+                        <div class="learning-module-top"><span class="learning-skill-icon" aria-hidden="true"><?= icon($learningIconMap[$module['skill']] ?? 'book', '', 22) ?></span><span class="learning-module-skill"><?= e($learningSkillNames[$module['skill']] ?? ucfirst($module['skill'])) ?></span><span class="learning-module-count"><?= (int) $module['item_count'] ?> <?= (int) $module['item_count'] === 1 ? 'item' : 'items' ?></span></div>
+                        <h3><?= e($module['title']) ?></h3><p><?= e(learning_module_description($module)) ?></p><div class="learning-module-bottom"><span><?= in_array($module['skill'], ['writing', 'speaking', 'speaking-writing'], true) ? 'Reflect & improve' : 'Learn with feedback' ?></span><a href="<?= e(learning_launch($module['practice_id'])) ?>" class="learning-module-link" aria-label="Practise <?= e($module['title']) ?> in <?= e($course['name']) ?>">Start practice <?= icon('arrow', '', 17) ?></a></div>
+                    </article>
+                    <?php endforeach; ?>
+                </div>
+                <div class="learning-course-sectionals" data-course-sectionals="<?= e($course['id']) ?>" <?= $course['id'] === $learningCourseId ? 'id="learning-sectionals"' : '' ?>>
+                    <div class="learning-section-heading"><div><p class="eyebrow">BUILD YOUR FOCUS A LITTLE FURTHER</p><h2>One section. Your full attention.</h2><p>Bring the question types together in a timed session.</p></div><span class="learning-timed-label"><?= icon('clock', '', 16) ?> Section tests</span></div>
+                    <div class="learning-section-grid">
+                        <?php foreach ($course['sections'] as $section): ?>
+                        <?php $sectionLaunchParts = explode('.', $section['exam_id']); $sectionSkill = $section['skill'] ?? end($sectionLaunchParts); ?>
+                        <article class="learning-sectional"><span class="learning-sectional-icon" aria-hidden="true"><?= icon($learningIconMap[$sectionSkill] ?? 'book', '', 23) ?></span><h3><?= e($section['title']) ?></h3><p><span><?= (int) $section['item_count'] ?> <?= (int) $section['item_count'] === 1 ? 'task' : 'tasks' ?></span><span><?= (int) ceil($section['duration_seconds'] / 60) ?> min</span></p><a href="<?= e(learning_launch($section['exam_id'])) ?>" class="learning-sectional-link" aria-label="Start <?= e($section['title']) ?> section for <?= e($course['name']) ?>">Start section <?= icon('arrow', '', 16) ?></a></article>
+                        <?php endforeach; ?>
                     </div>
-                </div>
-                <div class="practice-skill-grid" role="group" aria-label="Choose a skill">
-                    <button type="button" class="practice-skill is-selected" data-skill="Reading" aria-pressed="true">
-                        <span class="skill-icon skill-icon-reading" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M12 5c-3-2-7-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-2-1-6-1-9 1Zm0 0v15M6 8h3M6 11h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Reading</strong><span>Find meaning.<br>Connect the dots.</span><small>6 questions · instant feedback</small>
-                    </button>
-                    <button type="button" class="practice-skill" data-skill="Listening" aria-pressed="false">
-                        <span class="skill-icon skill-icon-listening" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M4 14v-3a8 8 0 0 1 16 0v3M4 12H3v7h4v-7H4Zm16 0h1v7h-4v-7h3Z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Listening</strong><span>Tune in.<br>Pick up the details.</span><small>6 questions · audio & transcript</small>
-                    </button>
-                    <button type="button" class="practice-skill" data-skill="Writing" aria-pressed="false">
-                        <span class="skill-icon skill-icon-writing" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-4L4 15l-1 6 6-2M4 15l5 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Writing</strong><span>Shape your ideas.<br>Make your point.</span><small>Guided prompt · word counter</small>
-                    </button>
-                    <button type="button" class="practice-skill" data-skill="Speaking" aria-pressed="false">
-                        <span class="skill-icon skill-icon-speaking" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M5 11a7 7 0 0 0 14 0m-7 7v4m-4 0h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Speaking</strong><span>Find your rhythm.<br>Speak with confidence.</span><small>Cue card · record & reflect</small>
-                    </button>
-                </div>
-                <div class="practice-session-preview">
-                    <div class="session-preview-info"><span class="session-preview-dot" aria-hidden="true"></span><div><strong id="preview-title">A greener kind of city</strong><p id="preview-description">Read a short article, then find the evidence behind each answer.</p></div></div>
-                    <div class="session-preview-actions"><span id="preview-duration">10 min</span><button type="button" class="btn btn-primary" id="start-practice">Let’s practise <span aria-hidden="true">→</span></button></div>
+                    <div class="learning-full-mock"><div><p class="eyebrow">WHEN YOU’RE READY FOR THE WHOLE EXPERIENCE</p><h2>Let your preparation come together.</h2><p>Step into the <?= e($course['name']) ?> full mock. Timed sections, original questions and a clear view of what to work on next.</p><div class="learning-full-facts"><span><?= icon('clock', '', 14) ?> <?= (int) ceil(array_sum(array_column($course['sections'], 'duration_seconds')) / 60) ?> minutes</span><span><?= count($course['sections']) ?> sections</span><span><?= array_sum(array_column($course['sections'], 'item_count')) ?> tasks</span></div></div><a class="btn btn-lime learning-full-link" href="<?= e(learning_launch($course['full_exam_id'])) ?>">Start full mock <?= icon('arrow', '', 19) ?></a><span class="learning-full-decoration" aria-hidden="true"><?= icon('spark', '', 100) ?></span></div>
                 </div>
             </div>
-            <div class="practice-reassurance"><span>✓ Original practice material</span><span>✓ Learn at your own pace</span><span>✓ No pressure, just progress</span></div>
-            <p class="practice-disclaimer">These short exercises build individual skills. They are not full mock exams or official IELTS/PTE assessments. Reading and listening results show correct answers, not band scores.</p>
+            <?php endforeach; ?>
         </section>
 
-        <section id="practice-session" hidden aria-labelledby="session-title">
-            <div class="session-topline"><button type="button" class="practice-text-button" id="leave-session">← All practice</button><span class="practice-session-tag" id="session-tag">IELTS · Reading</span></div>
-            <div class="session-heading"><div><p class="eyebrow">ONE SESSION. ONE STEP FORWARD.</p><h1 id="session-title" tabindex="-1">A greener kind of city</h1></div><div class="session-timer"><span aria-hidden="true">◷</span><div><small>TIME REMAINING</small><strong id="practice-timer" role="timer" aria-live="off">10:00</strong></div></div></div>
-            <div class="quiz-progress" id="quiz-progress"><div><span id="question-progress-text">Question 1 of 6</span><span id="answered-progress-text">0 answered</span></div><progress id="answer-progress" max="6" value="0" aria-label="Questions answered"></progress></div>
-
-            <div class="practice-workspace" id="objective-workspace">
-                <article class="practice-resource">
-                    <div class="resource-label"><span id="resource-label-text">READING PASSAGE</span><span class="resource-original">NISHA ORIGINAL</span></div>
-                    <h2 id="resource-title"></h2>
-                    <div id="listening-controls" hidden>
-                        <div class="listening-player"><button type="button" class="audio-play-button" id="play-audio" aria-label="Play listening passage"><span aria-hidden="true">▶</span></button><div><strong>Listen closely. You’ve got this.</strong><p id="audio-status">Browser-generated audio · replay any time</p></div><button type="button" class="practice-text-button" id="stop-audio">Stop</button></div>
-                        <p class="audio-help">Uses your browser’s speech voice. Voice quality and availability vary by browser. Replay as often as you need.</p>
-                        <button type="button" class="practice-text-button transcript-toggle" id="toggle-transcript" aria-expanded="false" aria-controls="resource-passage">Show transcript <span aria-hidden="true">↓</span></button>
-                    </div>
-                    <div class="resource-passage" id="resource-passage"></div>
-                </article>
-                <div class="question-panel"><p class="eyebrow" id="question-number">QUESTION 01</p><fieldset id="question-fieldset"><legend id="question-prompt"></legend><div class="question-options" id="question-options"></div></fieldset><p class="question-hint">Choose one answer. You can change it before submitting.</p><div class="question-navigation"><button type="button" class="btn btn-outline" id="previous-question">← Previous</button><button type="button" class="btn btn-primary" id="next-question">Next question →</button></div><div class="question-jump" id="question-jump" role="group" aria-label="Jump to a question"></div><div class="quiz-finish-row"><span>Ready when you are.</span><button type="button" class="practice-text-button" id="finish-quiz">Finish & review →</button></div></div>
-            </div>
-
-            <div class="practice-workspace" id="creative-workspace" hidden>
-                <article class="practice-resource creative-prompt"><div class="resource-label"><span id="creative-label">YOUR WRITING PROMPT</span><span class="resource-original">NISHA ORIGINAL</span></div><h2 id="creative-prompt"></h2><p id="creative-instructions"></p><ul id="speaking-cues" hidden></ul><div class="creative-reflection"><span class="eyebrow">A MOMENT TO REFLECT</span><h3>Small checks. Stronger skills.</h3><ul id="creative-checklist"></ul></div></article>
-                <div class="creative-work-panel">
-                    <div id="writing-tools"><label for="writing-answer">Your ideas belong here.</label><textarea id="writing-answer" placeholder="Start with your main idea…" spellcheck="true"></textarea><div class="writing-meta"><span id="word-count" aria-live="polite">0 words</span><span id="word-target">Aim for at least 250 words</span></div><p class="creative-privacy">Your text stays in this page and is not submitted for marking. Copy or download it before leaving.</p><button type="button" class="btn btn-outline" id="download-writing">Download my writing ↓</button></div>
-                    <div id="speaking-tools" hidden><div class="recorder-visual" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div><h3>Your voice. Your progress.</h3><p>Record a response, then listen back with the reflection checklist.</p><button type="button" class="btn btn-primary" id="record-speaking">Start recording <span aria-hidden="true">●</span></button><p id="record-status" role="status">Your microphone is only used when you choose to record.</p><audio id="speaking-playback" controls hidden></audio><div class="recording-actions" id="recording-actions" hidden><a id="download-recording" class="practice-text-button" download="nisha-speaking-practice.webm">Download recording ↓</a><button type="button" class="practice-text-button" id="delete-recording">Delete recording</button></div><p class="creative-privacy">Audio stays in your browser and is never uploaded. Recording requires microphone permission and a supported browser on HTTPS or localhost.</p></div>
-                    <div class="creative-finish"><button type="button" class="btn btn-primary" id="finish-creative">Finish & reflect <span aria-hidden="true">→</span></button><p id="creative-completion" role="status"></p></div>
-                </div>
-            </div>
-            <p class="practice-disclaimer">Original practice material. Writing and speaking are self-guided exercises with no automated marking. This session does not provide an official exam score.</p>
-        </section>
-
-        <section id="practice-results" hidden aria-labelledby="results-title">
-            <div class="session-topline"><button type="button" class="practice-text-button" id="results-all-practice">← All practice</button><span class="practice-session-tag" id="results-tag">IELTS · Reading</span></div>
-            <div class="results-summary"><div class="results-score"><strong id="result-score">0<span>/6</span></strong><span>ANSWERS CORRECT</span></div><div class="results-message"><p class="eyebrow">THAT’S ANOTHER STEP FORWARD</p><h1 id="results-title" tabindex="-1">Every attempt teaches you something.</h1><p id="result-description"></p><div class="results-meta"><span id="result-percent"></span><span id="result-duration"></span></div></div></div>
-            <div class="results-next-step"><div><strong>Keep the learning going.</strong><p id="save-result-status"><?php echo $practiceSignedIn ? 'Your result will be saved to your dashboard when you finish.' : 'Create a free account to save results from future practice sessions.'; ?></p></div><?php if (!$practiceSignedIn): ?><a href="register.php" class="btn btn-primary">Join NISHA <span aria-hidden="true">→</span></a><?php endif; ?><button type="button" class="btn btn-outline" id="retry-practice">Try this set again ↻</button></div>
-            <div class="review-heading"><div><p class="eyebrow">UNDERSTANDING IS THE REAL WIN</p><h2>Let’s learn from your answers.</h2></div><p>Open each question to see the explanation.</p></div><div id="answer-review" class="answer-review"></div>
-            <p class="practice-disclaimer">This is a short practice result, not an IELTS band score or a PTE score. The same questions appear when you retry this set.</p>
-        </section>
-        <noscript><p class="practice-noscript">Please enable JavaScript to use the interactive practice studio. You can still browse the rest of NISHA.</p></noscript>
-        <div id="practice-announcer" class="practice-sr-only" aria-live="polite" aria-atomic="true"></div>
+        <section class="learning-good-to-know" aria-labelledby="learning-transparency-title"><div><span aria-hidden="true"><?= icon('heart', '', 22) ?></span><h2 id="learning-transparency-title">A thoughtful space to prepare.</h2></div><div><h3>Practice that tells you what it is.</h3><p>All questions are original, unofficial learning material. Some guided questions and all sectional tests share the full-mock bank. Course variants may share same-format questions; these are not independent unseen papers.</p></div><div><h3>Helpful feedback, honest limits.</h3><p>Objective questions earn practice points. Writing and speaking use self-review guidance. Listening uses browser speech. Recordings stay in the current tab: download them before leaving. No official band score or PTE score is generated.</p></div></section>
+        <p class="learning-warmup-note">Just getting started? <a href="quick-practice.php">Try a short Academic warm-up <?= icon('arrow', '', 13) ?></a></p>
     </div>
 </main>
-<dialog id="practice-confirm-dialog" class="practice-dialog"><form method="dialog"><span class="eyebrow">YOUR PRACTICE, YOUR CALL</span><h2 id="confirm-title">Ready to review?</h2><p id="confirm-description"></p><div><button value="cancel" class="btn btn-outline">Keep practising</button><button value="confirm" class="btn btn-primary" id="confirm-action">Finish & review</button></div></form></dialog>
-<script id="practice-data" type="application/json"><?php echo json_encode(['modules' => $practiceData, 'signedIn' => $practiceSignedIn], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR); ?></script>
+<script id="learning-catalog-data" type="application/json"><?= json_encode(['courses' => array_map(static fn($course) => ['id' => $course['id'], 'name' => $course['name'], 'description' => $course['description']], $learningCourses), 'initial' => ['course' => $learningCourseId, 'skill' => $learningSkill, 'q' => $learningQuery]], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>

@@ -118,7 +118,7 @@ async function finishEveryItem(examId) {
     browser = await chromium.launch({ executablePath: process.env.NISHA_CHROMIUM_BIN || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
     await attach();
     await page.goto(`${base}/exams.php`);
-    ok(await page.locator('.full-exam-card').count() === 2, 'Both full mocks available');
+    ok(await page.locator('.full-exam-card').count() === 4, 'All four full mocks available');
     const containsAnswer = await page.evaluate(() => {
         const visit = value => value && typeof value === 'object' && Object.entries(value).some(([key, child]) => ['answer', 'explanation', 'correct_text'].includes(key) || visit(child));
         return Boolean(visit(JSON.parse(document.querySelector('#exam-data').textContent)));

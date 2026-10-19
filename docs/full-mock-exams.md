@@ -1,6 +1,6 @@
 # NISHA full mock exams
 
-NISHA has two learning paths: the original short practice studio at `practice.php`, and full Academic mock exams at `exams.php`. Full mocks use original content, longer stimuli, varied response controls, section clocks, and an end-of-exam review. They are independent study material rather than official exam papers or secure/proctored assessments.
+Start at `practice.php` to choose guided question-type exercises, timed sectional tests or full mock exams. `exams.php` runs all three session modes. The optional original quick studio is at `quick-practice.php`. Full mocks use original content, longer stimuli, varied response controls, section clocks, and an end-of-exam review. They are independent study material rather than official exam papers or secure/proctored assessments.
 
 ## IELTS Academic mock 01
 
@@ -33,6 +33,20 @@ The 22 section-qualified task formats are:
 
 The dropdown and text controls are accessible practice alternatives to the proprietary test interface. Audio-based tasks use original lectures, discussions, announcements, and situations. Describing images uses real chart data rendered in the page, with a table alternative.
 
+## IELTS General Training mock 01
+
+General Training has the same 30/60/60/14-minute section budgets and 85 tasks as the Academic mock. Listening and speaking intentionally share the Academic bank because their delivery formats are shared. Its 40 reading questions use a new three-section bank of everyday notices, workplace material and a longer general-interest text. Writing includes a 150-word letter and a 250-word essay. The letter task differs from Academic Task 1's visual description.
+
+## PTE Core mock 01
+
+Core has 60 tasks across Speaking & Writing (30), Reading (15) and Listening (15), with configured 60/30/30-minute budgets. Its 19 question types include Write Email and practical workplace/everyday situations. Core-specific summary targets are 25–50 words for Summarize Written Text and 20–30 words for Summarize Spoken Text; Write Email targets 50–120 words. Same-format items are deliberately shared with the Academic bank. Core excludes Academic's Retell Lecture, Summarize Group Discussion, Write Essay and Highlight Correct Summary.
+
+## Guided and sectional sessions
+
+Guided sessions collect items of one question type and allow free navigation, audio replay, transcripts and an answer check after each response. They have no section or task countdown and are labelled guided practice. The suggested time remains guidance. Changing an answer clears its old feedback; checking again obtains a fresh server result. Speaking and writing checks return self-review criteria rather than automatic language scores.
+
+Sectional sessions take an exact section from the selected full mock and preserve its time budget and navigation rules. Their content overlaps the full mock. Finish a guided or sectional session to save its report to the same private account history. Device autosave and its 48-hour expiry apply to all modes.
+
 ## Audio, recordings, and assistance
 
 Listening is generated from the supplied original scripts using the browser's speech voices. It is not a collection of professionally recorded official test audio. Check sound before starting; availability and quality depend on the student's browser/device. In exam mode a resource can be played once, and its script stays hidden. Assisted mode makes replay/transcripts available and labels the attempt as assisted, so a device without working speech audio can still use the material. Changing to assistance during a session remains reflected in the report.
@@ -64,11 +78,11 @@ At final submission, the server marks objective responses against its original a
 4. Visit `exams.php`, complete a sample attempt, and check both guest marking and signed-in report saving. Verify that an account cannot open another account's saved result.
 5. Keep HTTPS enabled for microphone support and secure account sessions.
 
-The new migration is needed only for saving full mock history. Without it the server still marks an exam and clearly reports that the result was not saved.
+The migration is needed for saving guided, sectional and full mock history; an installation that already has `exam_runs` needs no additional migration for the practice library. Without it the server still marks an exam and clearly reports that the result was not saved.
 
 ## Maintaining question content
 
-Content lives in `includes/exams/ielts-academic-01.php` and `includes/exams/pte-academic-01.php`. Add a new exam id/version when changing question structure so existing local answers are not attached to a different question set. The public data serializer removes answer keys, explanations, and corrected transcripts. Those become available through the marking endpoint after a submission. These are learning exercises; this is not a proctored-test security boundary.
+Full content lives in the four `includes/exams/*.php` files. Extra IELTS modules live in `includes/practice/ielts-modules.php`; the generated catalogue is defined in `includes/learning-catalog.php`. Add a new exam id/version when changing question structure so existing local answers are not attached to a different question set. The public data serializer removes answer keys, explanations, and corrected transcripts. Those become available through the marking endpoint after a submission. These are learning exercises; this is not a proctored-test security boundary.
 
 Use original material, check every answer against its source passage/script, and keep word-limit instructions compatible with accepted answers. The content contract is in `docs/exam-contract.md`. Run the integrity suite described in `tests/README.md` and test the affected controls in a browser before publishing content updates.
 

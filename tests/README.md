@@ -1,4 +1,4 @@
-# Full mock regression checks
+# NISHA regression checks
 
 Run from the project root with PHP 8.2 or newer:
 
@@ -47,3 +47,11 @@ speech stub for deterministic checks; audible voice quality still needs a
 manual check on the student's real browser. Microphone checks use Chromium's
 fake test device, not the user's microphone. Screenshots and test downloads go
 to a temporary directory outside the checkout.
+
+## Learning library checks
+
+Run `php tests/learning-integrity.php` for the four-course catalogue, all generated practice/section definitions, known type coverage, resources, answer validation and correct/incorrect/skipped grading. It needs no database or network.
+
+With the local PHP server running, run `node tests/learning-browser-smoke.js`. It uses Playwright/Chromium and the same loopback-only guard and environment overrides as the full-mock suite. It creates no account. Coverage includes course/search/skill navigation, every response control, server feedback and rejection paths, untimed restore, timed expiry, changed/shared audio resources, visual rendering, self-review-only results and mobile overflow. It checks public JSON for leaked answer keys and unexpected external network requests. The checks use deterministic speech stubs; browser voice quality remains device dependent.
+
+At this release, the pure suites pass 11,543 full-exam assertions and 7,936 library assertions across 139 sessions. Browser suites pass 45 full-mock checks and 53 library checks. These counts cover exercised cases and are not an editorial guarantee for every possible response.
