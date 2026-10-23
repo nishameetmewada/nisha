@@ -398,8 +398,7 @@
         $('item-task-type').textContent = question.task_type || question.type;
         $('item-kicker').textContent = question.title || `${exam.exam} PRACTICE`;
         $('item-title').textContent = question.prompt || question.title || question.task_type;
-        const taskInstructions = (question.instructions || '').replace('This response requires self-review; no automated band is awarded.', guided() ? 'Use the checklist or request optional AI coaching below when configured. AI scores are practice estimates.' : 'Use the checklist. Optional AI coaching is available after you submit and save this timed test.');
-        $('item-instructions').textContent = taskInstructions;
+        $('item-instructions').textContent = question.instructions || '';
         $('previous-item').hidden = part.navigation === 'forward';
         $('previous-item').disabled = state.itemIndex === 0;
         $('next-item').textContent = state.itemIndex === part.items.length - 1 ? state.sectionIndex === exam.sections.length - 1 ? 'Finish & submit →' : 'Next section →' : 'Next task →';

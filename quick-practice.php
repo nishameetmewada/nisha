@@ -1,11 +1,33 @@
 <?php
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
+require_once __DIR__ . '/includes/learning-catalog.php';
+$guidedTasks = [
+    'IELTS' => ['Writing' => 'practice.ielts-academic.writing-academic-writing-task-2', 'Speaking' => 'practice.ielts-academic.speaking-speaking-part-2-indiv-2b10de49'],
+    'PTE' => ['Writing' => 'practice.pte-academic.writing-write-essay', 'Speaking' => 'practice.pte-academic.speaking-read-aloud'],
+];
+$requestedExam = strtoupper(is_string($_GET['exam'] ?? null) ? $_GET['exam'] : 'IELTS');
+$requestedSkill = ucfirst(strtolower(is_string($_GET['skill'] ?? null) ? $_GET['skill'] : ''));
+if (($_GET['start'] ?? '') === '1' && isset($guidedTasks[$requestedExam][$requestedSkill])) {
+    header('Location: exams.php?exam=' . rawurlencode($guidedTasks[$requestedExam][$requestedSkill]) . '&start=1');
+    exit;
+}
 $pageTitle = 'Quick warm-ups';
 $activePage = 'practice';
 $extraStyles = ['assets/css/practice.css'];
 $extraScripts = ['assets/js/practice.js'];
 $practiceData = require __DIR__ . '/includes/practice-data.php';
+foreach ($guidedTasks as $exam => $skills) {
+    foreach ($skills as $skill => $id) {
+        $guided = nisha_resolve_exam($id);
+        if (!$guided) throw new UnexpectedValueException('The guided warm-up task is unavailable.');
+        $practiceData[$exam][$skill]['guidedUrl'] = 'exams.php?exam=' . rawurlencode($id) . '&start=1';
+        $practiceData[$exam][$skill]['title'] = $guided['name'];
+        $practiceData[$exam][$skill]['description'] = $skill === 'Writing'
+            ? 'Open guided writing practice with word counts, saved results and an AI coaching option.'
+            : 'Open guided speaking practice with recording, transcripts and an AI coaching option.';
+    }
+}
 $practiceSignedIn = current_user() !== null;
 include __DIR__ . '/includes/header.php';
 ?>
@@ -45,17 +67,18 @@ include __DIR__ . '/includes/header.php';
                     </button>
                     <button type="button" class="practice-skill" data-skill="Writing" aria-pressed="false">
                         <span class="skill-icon skill-icon-writing" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-4L4 15l-1 6 6-2M4 15l5 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Writing</strong><span>Shape your ideas.<br>Make your point.</span><small>Guided prompt · word counter</small>
+                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Writing</strong><span>Shape your ideas.<br>Make your point.</span><small>Guided prompt · AI coaching option</small>
                     </button>
                     <button type="button" class="practice-skill" data-skill="Speaking" aria-pressed="false">
                         <span class="skill-icon skill-icon-speaking" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><rect x="9" y="2" width="6" height="13" rx="3" stroke="currentColor" stroke-width="1.6"/><path d="M5 11a7 7 0 0 0 14 0m-7 7v4m-4 0h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></span>
-                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Speaking</strong><span>Find your rhythm.<br>Speak with confidence.</span><small>Cue card · record & reflect</small>
+                        <span class="skill-selected-mark" aria-hidden="true">✓</span><strong>Speaking</strong><span>Find your rhythm.<br>Speak with confidence.</span><small>Record or transcribe · AI coaching option</small>
                     </button>
                 </div>
                 <div class="practice-session-preview">
                     <div class="session-preview-info"><span class="session-preview-dot" aria-hidden="true"></span><div><strong id="preview-title">A greener kind of city</strong><p id="preview-description">Read a short article, then find the evidence behind each answer.</p></div></div>
                     <div class="session-preview-actions"><span id="preview-duration">10 min</span><button type="button" class="btn btn-primary" id="start-practice">Let’s practise <span aria-hidden="true">→</span></button></div>
                 </div>
+                <p id="guided-practice-notice" class="practice-disclaimer" hidden>Writing and speaking open in guided practice. Signed-in students can request an AI practice estimate and improvement plan when coaching is available.</p>
             </div>
             <div class="practice-reassurance"><span>✓ Original practice material</span><span>✓ Learn at your own pace</span><span>✓ No pressure, just progress</span></div>
             <p class="practice-disclaimer">These short exercises build individual skills. They are not full mock exams or official IELTS/PTE assessments. Reading and listening results show correct answers, not band scores.</p>
@@ -88,7 +111,7 @@ include __DIR__ . '/includes/header.php';
                     <div class="creative-finish"><button type="button" class="btn btn-primary" id="finish-creative">Finish & reflect <span aria-hidden="true">→</span></button><p id="creative-completion" role="status"></p></div>
                 </div>
             </div>
-            <p class="practice-disclaimer">Original practice material. Writing and speaking are self-guided exercises with no automated marking. This session does not provide an official exam score.</p>
+            <p class="practice-disclaimer">Original practice material. Reading and listening warm-ups show practice points. Writing and speaking open guided sessions with an AI coaching option. No practice result is an official exam score.</p>
         </section>
 
         <section id="practice-results" hidden aria-labelledby="results-title">

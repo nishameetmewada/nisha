@@ -60,7 +60,7 @@ At this release, the pure suites pass 11,543 full-exam assertions and 7,936 libr
 
 Run `php tests/ai-review-integrity.php` for pure prompt/schema/scoring and PCM-WAV checks. Add `--database` to exercise real local persistence, ownership, idempotency, duplicate reservations and daily quotas using temporary accounts. It uses explicit CLI-only fake HTTP transports, never a paid API call. Its cleanup removes only its own accounts/counters and subtracts only its own global reservations. The complete suite currently passes 593 checks.
 
-Run `node tests/ai-review-browser-smoke.js` for the 57-check local HTTP/browser suite. It starts an isolated loopback PHP server and upload temporary directory. It tests actual auth/CSRF/unconfigured states, temp-file cleanup, browser PCM conversion and a five-minute upload, as well as feedback UI, retries, stale-answer handling, safe rendering and private saved history. Provider replies in UI tests are explicitly route mocked. No production test-mode environment variable or provider-URL override exists.
+Run `node tests/ai-review-browser-smoke.js` for the 67-check local HTTP/browser suite. It starts an isolated loopback PHP server and upload temporary directory. It tests actual auth/CSRF/unconfigured states, temp-file cleanup, browser PCM conversion and a five-minute upload, as well as feedback UI, retries, stale-answer handling, safe rendering and private saved history. It also verifies that the quick studio opens all four AI-capable writing/speaking routes while reading/listening warm-ups still work. Provider replies in UI tests are explicitly route mocked. No production test-mode environment variable or provider-URL override exists.
 
 The existing full and learning suites still pass 11,543 and 7,936 pure assertions plus 45 and 53 browser checks. Typography/theme validation covered light/dark preference, keyboard controls, persistence, system changes, accounts and responsive pages at 320/390/768/1440. A real API key is still needed to verify model availability, service/billing permissions, transcription quality and scoring accuracy; these tests do not establish those properties.
 
@@ -70,4 +70,19 @@ The existing full and learning suites still pass 11,543 and 7,936 pure assertion
 
 `node tests/auth-browser-smoke.js` checks 24 local browser cases: visible editable inputs in both themes and phone/desktop layouts, genuine registration/login/logout, wrong-password rejection, private session isolation, and an isolated unavailable-database scenario. It cleans only its own test accounts. Missing hosting configuration must produce a clear error, never fake authentication or disabled/invisible fields.
 
+`php tests/auth-database-integrity.php` checks 15 cases using a disposable local database and database user: missing settings/driver/table/column, denied access, a failed connection, private diagnostic output, and genuine account insertion/password verification with only the users table present. It needs the prepared local MariaDB admin wrapper (`NISHA_TEST_MYSQL_ADMIN_BIN` overrides the path); the fixture connects to loopback and does not use the application's private database credentials. Missing history tables must not prevent registration or sign-in. See [database setup](../docs/database-setup.md) for the hosting-side diagnosis; the CLI-only `check-setup.php` never makes a paid API call or prints credentials.
+
 The AI browser suite also restores an old local result, preserves its responses/attempt/raw JSON, checks the visible AI setup/sign-in/ready/progress/completed status and explicit review shortcut, and reproduces the two-item PTE written-summary result without substituting an official PTE score.
+
+## All-page browser audit
+
+Run `node tests/pages-browser-smoke.js` against the local PHP server and imported
+database. This loopback-only suite checks all nine public and account pages in
+light and dark mode at 320, 390, 768 and 1440 pixels. Its 91 checks cover readable
+inputs, mobile overflow, images, scripts and styles, JavaScript exceptions,
+navigation and keyboard theme controls, internal links and anchors, legacy
+IELTS/PTE practice links, and HTTP launches for all 139 sessions. It also creates
+one temporary student, saves a genuine mock result, opens its dashboard and
+private result/history, and signs out. Cleanup deletes only that exact student
+and its dependent results. It makes no paid AI calls and does not establish that
+a separately deployed Hostinger database or API key is configured correctly.

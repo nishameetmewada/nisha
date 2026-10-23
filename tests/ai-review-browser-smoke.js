@@ -122,6 +122,26 @@ async function upload(buffer, mime = 'audio/wav') {
     context = await browser.newContext({ viewport: { width: 1440, height: 1100 } });
     await context.route('**/*', route => { const url = new URL(route.request().url()); if (['http:', 'https:'].includes(url.protocol) && url.origin !== base) { external.push(url.origin); return route.abort(); } return route.continue(); });
     page = await context.newPage(); page.on('pageerror', error => errors.push(error.message));
+    const guidedWarmUps = [
+        ['IELTS', 'Writing', 'practice.ielts-academic.writing-academic-writing-task-2'],
+        ['IELTS', 'Speaking', 'practice.ielts-academic.speaking-speaking-part-2-indiv-2b10de49'],
+        ['PTE', 'Writing', 'practice.pte-academic.writing-write-essay'],
+        ['PTE', 'Speaking', 'practice.pte-academic.speaking-read-aloud'],
+    ];
+    for (const [examName, skill, target] of guidedWarmUps) {
+        await page.goto(`${base}/quick-practice.php?exam=${examName}&skill=${skill}`);
+        assert(await page.locator('#guided-practice-notice').isVisible(), 'The warm-up explains that it opens guided practice.');
+        await page.locator('#start-practice').click();
+        await page.waitForURL(url => url.pathname === '/exams.php' && url.searchParams.get('exam') === target);
+        await page.locator('#ready-confirmed').check(); await page.locator('#begin-exam').click();
+        ok(await page.locator('#item-response .ai-review-panel').isVisible() && await page.locator('#item-response [data-ai-action]').isDisabled(), `${examName} ${skill} warm-up opens its matching guided task and honest guest AI coaching state`);
+        const direct = await page.request.get(`${base}/quick-practice.php?exam=${examName}&skill=${skill}&start=1`, { maxRedirects: 0 });
+        ok(direct.status() === 302 && new URL(direct.headers().location, base).searchParams.get('exam') === target, `Old ${examName} ${skill} direct links use the same AI-capable guided session`);
+    }
+    for (const skill of ['Reading', 'Listening']) {
+        await page.goto(`${base}/quick-practice.php?exam=PTE&skill=${skill}&start=1`);
+        ok(await page.locator('#practice-session').isVisible() && await page.locator('#question-options input').count() > 0 && new URL(page.url()).pathname === '/quick-practice.php', `${skill} short warm-ups still open their original interactive questions`);
+    }
     const { exam, item } = config.sessions.essay;
     await start(exam.id);
     const assetUrls = await page.locator('script[src],link[rel="stylesheet"]').evaluateAll(elements => elements.map(element => element.src || element.href));

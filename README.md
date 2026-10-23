@@ -15,7 +15,7 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - Interactive choices, typed and dropdown gaps, matching, paragraph ordering, incorrect-word selection, writing and optional microphone recording.
 - Original passages, audio scripts, charts, tables, maps and process diagrams.
 - Device autosave, resumed sessions, server marking, and private account history for guided, sectional and full attempts.
-- An optional legacy quick studio at `quick-practice.php`, with short six-question activities.
+- A quick studio at `quick-practice.php`, with six-question reading/listening warm-ups and direct routes into AI-capable guided writing/speaking.
 - A MySQL schema for users, short practice history, and complete reports.
 
 The configured full mock budgets are 164 minutes for each IELTS version, 140 minutes for PTE Academic and 120 minutes for PTE Core. These are NISHA learning choices; real test counts and delivery arrangements vary. Objective tasks report raw practice points. Writing and speaking offer optional OpenAI API practice estimates, criterion feedback and improvement plans when the site owner configures a key. Self-review remains available. AI estimates are separate from objective points and are not official or validated proficiency scores. Listening uses browser speech rather than professional test recordings. Some same-format questions are shared between course variants and practice modes, as disclosed in the catalogue.
@@ -37,6 +37,8 @@ Use a Hostinger **web hosting plan with PHP and MySQL**. This project is deploye
 7. Visit your domain, create a new account, finish a reading/listening session or full mock, and check that the saved result appears on **My dashboard**. Sign out and sign in again. On your domain, requests to `/config/config.php`, `/database/schema.sql`, and `/includes/bootstrap.php` should return a forbidden response; the supplied Apache/LiteSpeed rules protect those directories.
 
 A deployment ZIP is provided separately with the project files at its root. It includes the example configuration but **does not include the local database configuration, students, passwords, database data, or development runtime**. Extract it into `public_html`, then complete steps 2, 3, 5, 6, and 7. Do not upload the `.git` directory, development tools, or database backups.
+
+For an existing website, preserve **`public_html/config/config.php`** when uploading an update. Import `database/schema.sql` into its configured database if any tables are missing; the import preserves existing tables and records. Uploading the ZIP alone does not connect the website to MySQL or activate OpenAI. If registration shows “temporarily unavailable”, follow the [database setup guide](docs/database-setup.md). An owner with SSH access can run `php check-setup.php` privately for a credential-free report; browser access to that script returns 404.
 
 If your host uses Nginx instead of Apache/LiteSpeed, configure equivalent server rules denying direct access to `config`, `database`, `includes`, dotfiles, and source/deployment archives. Nginx does not process `.htaccess`.
 
@@ -101,6 +103,7 @@ Add content through the canonical exam files or the supplemental module bank; se
 - Check PHP syntax: `find . -name '*.php' -not -path './config/config.php' -exec php -l {} \;`.
 - Run `php tests/exam-integrity.php` and `php tests/learning-integrity.php` for content, coverage, generated-session and marking checks.
 - Run `node tests/exam-browser-smoke.js` and `node tests/learning-browser-smoke.js` against the local PHP server with Playwright and Chromium installed; see `tests/README.md`.
+- Run `php tests/auth-database-integrity.php`, `node tests/auth-browser-smoke.js` and `node tests/pages-browser-smoke.js` for account failure cases and the full page/link/theme audit. These account tests create and clean disposable local records; do not run them against production.
 - Load the home, registration, login, practice, and full mock pages at desktop and mobile widths.
 - Test full-mock resume, section expiry, forward-only PTE navigation, server submission, and saved history.
 - Register, sign out, sign in, complete a quiz, and confirm the dashboard result survives a new login.

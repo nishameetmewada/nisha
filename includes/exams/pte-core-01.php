@@ -63,7 +63,7 @@ $coreSituationRubrics = [
     [
         'Explain the group’s space needs and the consequence of losing the usual room.',
         'Offer a workable alternative, such as another suitable time or two smaller sessions, and ask how to confirm it.',
-        'Use polite, clear language to the centre manager. Review fluency and pronunciation yourself; this task is ungraded.',
+        'Use polite, clear language to the centre manager. AI coaching can review transcribed language when enabled; review fluency and pronunciation yourself.',
     ],
     [
         'Describe the damaged parts and make the promotion deadline clear.',
@@ -100,7 +100,7 @@ $coreSpeakingWriting[] = [
         'Explain the move from identical introductory training to support matched to staff needs.',
         'Include important support, such as the shared security briefing, ongoing help or fair access, without listing every detail.',
         'Distinguish encouraging feedback from a proven improvement; the company is still evaluating the change.',
-        'Use 25–50 words with accurate grammar, vocabulary and spelling. This writing is ungraded.',
+        'Use 25–50 words with accurate grammar, vocabulary and spelling. Request AI coaching when enabled for a practice estimate and advice.',
     ],
     'explanation' => 'One possible summary: Harbour Services now matches software training to employees’ needs while retaining a shared security briefing and ongoing support. It is assessing errors and access to help, including for evening workers, before judging the new approach’s effectiveness.',
 ];
@@ -128,7 +128,7 @@ $coreSpeakingWriting[] = [
         'Describe both the leaking tap and the damp cupboard so the manager understands the concern.',
         'Request a repair and give a clear access window or a practical way to arrange it.',
         'Use a polite, appropriately firm tone without inventing legal claims or unrelated complaints.',
-        'Include a greeting and closing, stay within 50–120 words and check language accuracy. This response is ungraded.',
+        'Include a greeting and closing, stay within 50–120 words and check language accuracy. Request AI coaching when enabled for a practice estimate and advice.',
     ],
     'explanation' => 'The task requires a clear problem, a repair request and access arrangements. Details such as an available afternoon and a request to confirm the appointment can make the email actionable; alternative sensible details are acceptable.',
 ];
@@ -152,7 +152,7 @@ $coreListening = [[
         'Identify the move to secure parcel storage and the collection procedure or access arrangement.',
         'Choose the most important details; the word limit does not allow every exception and review date.',
         'Preserve the meaning without adding unsupported requirements or opinions.',
-        'Write 20–30 words with clear grammar and spelling. This task is ungraded and needs self-review.',
+        'Write 20–30 words with clear grammar and spelling. Request AI coaching when enabled for a practice estimate and advice, or use this checklist.',
     ],
     'explanation' => 'One possible summary: Parcels will move to secure storage beside reception. Residents need an arrival notice and identification, with advance arrangements available for collection by another adult.',
 ]];
@@ -167,13 +167,13 @@ return [
     'id' => 'pte-core-01', 'exam' => 'PTE', 'name' => 'PTE Core · Full mock 01',
     'version' => '2026-10-library-01',
     'description' => 'A 60-item Core practice route covering all 19 task formats, with everyday and workplace writing, spoken situations and a parcel-service announcement. Includes shared original PTE skills practice.',
-    'format_note' => 'Original, unofficial PTE Core practice. Configured mock budgets are 60 minutes Speaking & Writing, 30 minutes Reading and 30 minutes Listening (120 minutes total); these are practice settings, not a claim about a universal official test length or item count. The current official format and timing have not been independently verified for this release. Shared-format questions deliberately reuse the original NISHA PTE Academic practice bank, so taking both routes exposes some of the same questions; these are not independent unseen papers. Core-specific written and spoken summaries, emails and situation stimuli are original additions. Writing and speaking require self-review. Objective results are raw practice points, not official PTE 10–90 or integrated skill scores. Dictation uses simplified whole-sentence marking.',
+    'format_note' => 'Original, unofficial PTE Core practice. Configured mock budgets are 60 minutes Speaking & Writing, 30 minutes Reading and 30 minutes Listening (120 minutes total); these are practice settings, not a claim about a universal official test length or item count. The current official format and timing have not been independently verified for this release. Shared-format questions deliberately reuse the original NISHA PTE Academic practice bank, so taking both routes exposes some of the same questions; these are not independent unseen papers. Core-specific written and spoken summaries, emails and situation stimuli are original additions. Writing and speaking offer AI coaching when enabled, with review checklists also available. Objective results are raw practice points, not official PTE 10–90 or integrated skill scores. Dictation uses simplified whole-sentence marking.',
     'resources' => $coreResources,
     'sections' => [
         [
             'id' => 'pte-core-speaking-writing', 'title' => 'Speaking & Writing',
             'duration_seconds' => 3600, 'navigation' => 'forward',
-            'instructions' => 'Complete 30 tasks in order within the configured 60-minute budget. The seven task formats are Read Aloud, Repeat Sentence, Describe Image, Respond to a Situation, Answer Short Question, Summarize Written Text and Write Email. Use the displayed preparation and response limits. For situations, this mock allows 20 seconds of preparation and 40 seconds of speaking. Write 25–50 words for the 10-minute written summary and 50–120 words for each 9-minute email. Spoken answers and writing are ungraded; use the self-review guidance after finishing. Shared-format items overlap with the Academic practice bank.',
+            'instructions' => 'Complete 30 tasks in order within the configured 60-minute budget. The seven task formats are Read Aloud, Repeat Sentence, Describe Image, Respond to a Situation, Answer Short Question, Summarize Written Text and Write Email. Use the displayed preparation and response limits. For situations, this mock allows 20 seconds of preparation and 40 seconds of speaking. Write 25–50 words for the 10-minute written summary and 50–120 words for each 9-minute email. After submitting and saving, request AI coaching when enabled for writing or transcribed speech, or use the review checklists. Shared-format items overlap with the Academic practice bank.',
             'items' => $coreSpeakingWriting,
         ],
         [

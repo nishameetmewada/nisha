@@ -109,19 +109,60 @@ function db(): PDO
     return $connection;
 }
 
-function database_ready(): bool
+/**
+ * Account readiness is independent of optional practice/AI history tables.
+ * The status contains only fixed diagnostic codes, never connection details.
+ *
+ * @return array{ready: bool, code: string}
+ */
+function account_database_status(): array
 {
-    static $ready;
-    if ($ready !== null) {
-        return $ready;
+    static $status;
+    if ($status !== null) {
+        return $status;
     }
     try {
-        db()->query('SELECT id FROM users LIMIT 1');
-        db()->query('SELECT id FROM attempts LIMIT 1');
-        return $ready = true;
+        if (trim((string) config('db_name')) === '' || trim((string) config('db_user')) === '') {
+            return $status = ['ready' => false, 'code' => 'missing_configuration'];
+        }
     } catch (Throwable $exception) {
-        return $ready = false;
+        return $status = ['ready' => false, 'code' => 'invalid_configuration'];
     }
+    if (!extension_loaded('pdo_mysql')) {
+        return $status = ['ready' => false, 'code' => 'missing_mysql_driver'];
+    }
+    try {
+        $connection = db();
+    } catch (Throwable $exception) {
+        $cause = $exception->getPrevious();
+        $mysqlCode = $cause instanceof PDOException ? (int) ($cause->errorInfo[1] ?? 0) : 0;
+        $code = match ($mysqlCode) {
+            1044, 1045 => 'database_access_denied',
+            1049 => 'database_not_found',
+            default => 'database_connection_failed',
+        };
+        return $status = ['ready' => false, 'code' => $code];
+    }
+    try {
+        // Validate every column used by sign-in/current_user, without reading
+        // student records. An absent results table must not lock out accounts.
+        $connection->query('SELECT id, name, email, password_hash, created_at FROM users LIMIT 0');
+    } catch (PDOException $exception) {
+        $code = match ((string) $exception->getCode()) {
+            '42S02' => 'missing_accounts_table',
+            '42S22' => 'outdated_accounts_table',
+            default => 'accounts_table_unavailable',
+        };
+        return $status = ['ready' => false, 'code' => $code];
+    } catch (Throwable $exception) {
+        return $status = ['ready' => false, 'code' => 'accounts_table_unavailable'];
+    }
+    return $status = ['ready' => true, 'code' => 'ready'];
+}
+
+function database_ready(): bool
+{
+    return account_database_status()['ready'];
 }
 
 function csrf_token(): string

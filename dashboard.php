@@ -135,7 +135,7 @@ require __DIR__ . '/includes/header.php';
                 <a class="btn btn-primary" href="exams.php">Choose a practice session <span aria-hidden="true">→</span></a>
             </div>
         <?php else: ?>
-            <p class="mock-history-note">Objective tasks earn raw practice points. Writing and speaking are ungraded and need self-review. Assisted submissions may use transcripts or replay support.</p>
+            <p class="mock-history-note">Objective tasks earn raw practice points. Writing and speaking offer optional AI coaching with separate practice estimates and improvement advice. Open a result to review your responses or request coaching when available. Assisted submissions may use transcripts or replay support.</p>
             <div class="attempts-table-wrap">
                 <table class="attempts-table mock-history-table">
                     <caption class="sr-only">Your ten most recent saved practice and mock results. Scores are raw practice points, not official exam scores.</caption>

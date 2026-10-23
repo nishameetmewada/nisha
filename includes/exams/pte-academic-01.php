@@ -17,7 +17,7 @@ $spoken = static function (string $id, string $task, string $resource, string $p
         'rubric' => [
             'Review whether your response completed this particular task and conveyed the important meaning.',
             'Listen for clear pronunciation, a steady pace and connected phrases; avoid prolonged hesitation.',
-            'This response requires self-review. The browser does not award an official speaking score.',
+            'Request AI coaching when enabled for feedback on transcribed language. Review pronunciation and delivery yourself; no official speaking score is awarded.',
         ],
     ], $extra);
 };
@@ -229,7 +229,7 @@ foreach (['discussion-studio', 'discussion-fieldwork'] as $i => $resource) {
     $speakingWriting[] = $spoken('pte-sw' . ($i + 29), 'Summarize Group Discussion', $resource,
         'Listen to the three-person discussion and give a spoken summary of the main viewpoints and how they relate.', 10, 120,
         ['title' => 'Summarize Group Discussion ' . ($i + 1), 'cues' => ['Identify the shared problem, each speaker’s contribution and the outcome.', 'Summarise relationships, such as agreement, a concern or a proposed compromise.'],
-         'rubric' => ['Include the central issue and the important contributions of all three speakers.', 'Explain how ideas develop towards the proposed plan; avoid listing disconnected details.', 'Use your own connected language with clear pronunciation and an intelligible pace. This task is ungraded.']]);
+         'rubric' => ['Include the central issue and the important contributions of all three speakers.', 'Explain how ideas develop towards the proposed plan; avoid listing disconnected details.', 'Use your own connected language with clear pronunciation and an intelligible pace. AI coaching can review transcribed language when enabled; assess delivery yourself.']]);
 }
 foreach (['situation-lab', 'situation-work'] as $i => $resource) {
     $speakingWriting[] = $spoken('pte-sw' . ($i + 31), 'Respond to a Situation', $resource,
@@ -244,7 +244,7 @@ foreach (['swt-repair', 'swt-timetables'] as $i => $resource) {
         'prompt' => 'Summarise the passage in ONE sentence of 5–75 words. Include the central argument and its most important support.',
         'instructions' => 'You have 10 minutes. Write one complete sentence; use your own wording where possible.',
         'min_words' => 5, 'max_words' => 75, 'suggested_seconds' => 600,
-        'rubric' => ['Is the response one grammatical sentence between 5 and 75 words?', 'Does it retain the central argument rather than only one example?', 'Does it connect the key ideas accurately without adding unsupported claims?', 'Review grammar, spelling and word choice. This writing is ungraded.'],
+        'rubric' => ['Is the response one grammatical sentence between 5 and 75 words?', 'Does it retain the central argument rather than only one example?', 'Does it connect the key ideas accurately without adding unsupported claims?', 'Review grammar, spelling and word choice, or request AI coaching when enabled.'],
     ];
 }
 $speakingWriting[] = [
@@ -252,7 +252,7 @@ $speakingWriting[] = [
     'prompt' => 'Some universities require every undergraduate to complete a project with a local community organisation. Discuss the benefits and difficulties of this requirement and give your view on whether it should apply to all students. Support your position with reasons and examples.',
     'instructions' => 'You have 20 minutes. Write 200–300 words in connected paragraphs.',
     'min_words' => 200, 'max_words' => 300, 'suggested_seconds' => 1200,
-    'rubric' => ['Address both potential benefits and practical difficulties, and make your position clear.', 'Develop relevant reasons with examples; do not rely on a memorised unrelated response.', 'Organise an introduction, connected discussion and conclusion within 200–300 words.', 'Check range and control of grammar, vocabulary, punctuation and spelling. This writing requires self-review.'],
+    'rubric' => ['Address both potential benefits and practical difficulties, and make your position clear.', 'Develop relevant reasons with examples; do not rely on a memorised unrelated response.', 'Organise an introduction, connected discussion and conclusion within 200–300 words.', 'Check range and control of grammar, vocabulary, punctuation and spelling. AI coaching offers a practice estimate and advice when enabled.'],
 ];
 
 $reading = [
@@ -431,7 +431,7 @@ $listening = [
         'prompt' => 'Listen to the lecture and write a summary of 50–70 words. Include its main argument and the important supporting points.',
         'instructions' => 'You have 10 minutes for this task, including listening and writing. Listen once in exam practice.',
         'min_words' => 50, 'max_words' => 70, 'suggested_seconds' => 600,
-        'rubric' => ['Identify the need to design research quality and public participation together.', 'Include important support about protocols, training/feedback and access without attempting to list every example.', 'Use coherent sentences and accurate vocabulary in 50–70 words.', 'Review grammar and spelling yourself; this response is ungraded.'],
+        'rubric' => ['Identify the need to design research quality and public participation together.', 'Include important support about protocols, training/feedback and access without attempting to list every example.', 'Use coherent sentences and accurate vocabulary in 50–70 words.', 'Review grammar and spelling, or request AI coaching when enabled for a practice estimate and advice.'],
     ],
     [
         'id' => 'pte-l02', 'type' => 'multi', 'task_type' => 'Listening: Multiple Choice, Multiple Answers', 'title' => 'A revised food survey',
@@ -572,12 +572,12 @@ return [
     'id' => 'pte-academic-01', 'exam' => 'PTE', 'name' => 'PTE Academic · Full mock 01',
     'version' => '2026-10-original-01',
     'description' => 'An original 68-item Academic mock covering all 22 task formats, including Summarize Group Discussion and Respond to a Situation. Explore campus, research, community and workplace topics across three timed sections.',
-    'format_note' => 'Original, unofficial practice with configured budgets of 80 minutes Speaking & Writing, 25 minutes Reading and 35 minutes Listening (140 minutes total). Actual test counts and timings vary. Objective results are raw practice points with deductions for multiple selections and incorrect-word selections; writing and speaking require self-review. No official PTE 10–90 score or integrated skill score is estimated. Browser speech is a practice stimulus, not an official recording. Write from Dictation uses simplified whole-sentence marking.',
+    'format_note' => 'Original, unofficial practice with configured budgets of 80 minutes Speaking & Writing, 25 minutes Reading and 35 minutes Listening (140 minutes total). Actual test counts and timings vary. Objective results are raw practice points with deductions for multiple selections and incorrect-word selections. Writing and speaking offer AI coaching when enabled, with review checklists also available. No official PTE 10–90 score or integrated skill score is estimated. Browser speech is a practice stimulus, not an official recording. Write from Dictation uses simplified whole-sentence marking.',
     'resources' => $resources,
     'sections' => [
         [
             'id' => 'pte-speaking-writing', 'title' => 'Speaking & Writing', 'duration_seconds' => 4800, 'navigation' => 'forward',
-            'instructions' => 'Complete 35 tasks in order. Once you move forward, you cannot return in exam mode. Use the preparation and response limits shown for spoken tasks. Listen once to audio stimuli; notes are allowed. Read Aloud uses 35 seconds of preparation and 40 seconds of speaking in this configured mock. Written summaries allow 10 minutes each and the essay 20 minutes, within the section budget. Optional local recordings are for your own review and are not automatically scored. The five Answer Short Question responses are spoken and ungraded, with example answers available after submission.',
+            'instructions' => 'Complete 35 tasks in order. Once you move forward, you cannot return in exam mode. Use the preparation and response limits shown for spoken tasks. Listen once to audio stimuli; notes are allowed. Read Aloud uses 35 seconds of preparation and 40 seconds of speaking in this configured mock. Written summaries allow 10 minutes each and the essay 20 minutes, within the section budget. After submitting and saving, request AI coaching when enabled for writing or transcribed speech. Recordings leave this tab only when you choose to send them for coaching. The five Answer Short Question responses are spoken, with example answers available after submission.',
             'items' => $speakingWriting,
         ],
         [

@@ -56,7 +56,9 @@
         });
         $('preview-title').textContent = module.title;
         $('preview-description').textContent = module.description;
-        $('preview-duration').textContent = `${module.duration / 60} min`;
+        $('preview-duration').textContent = module.guidedUrl ? 'Untimed practice' : `${module.duration / 60} min`;
+        $('guided-practice-notice').hidden = !module.guidedUrl;
+        $('start-practice').textContent = module.guidedUrl ? 'Open guided practice →' : 'Let’s practise →';
     }
 
     function updateTimer() {
@@ -76,6 +78,11 @@
     }
 
     function startPractice() {
+        const selected = data.modules[state.exam][state.skill];
+        if (selected.guidedUrl) {
+            window.location.assign(selected.guidedUrl);
+            return;
+        }
         stopTimer();
         stopSpeech();
         stopRecording(true);
