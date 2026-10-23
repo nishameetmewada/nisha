@@ -18,6 +18,44 @@ function nisha_ai_entry(array $row): array
         'review' => json_decode($row['review_json'], true, 32, JSON_THROW_ON_ERROR)];
 }
 
+/** Read only: an interrupted browser can recover a review without another upload. */
+function nisha_ai_request_status(PDO $pdo, int $userId, mixed $requestId): array
+{
+    if (!is_string($requestId) || !preg_match('/\A[A-Za-z0-9][A-Za-z0-9_-]{15,79}\z/D', $requestId)) {
+        throw new NishaAiException('Use the saved AI review reference to check its status.', 'ai_invalid_request', 422, false);
+    }
+    $statement = $pdo->prepare('SELECT *, (claimed_at <= UTC_TIMESTAMP() - INTERVAL 10 MINUTE) AS claim_expired FROM ai_reviews WHERE user_id = ? AND request_id = ? LIMIT 1');
+    $statement->execute([$userId, $requestId]);
+    $row = $statement->fetch();
+    if (!$row) return ['success' => false, 'state' => 'not_found', 'error' => 'This AI review has not reached your account. Your work is retained; retry when your connection is available.'];
+    if ($row['status'] === 'completed') {
+        $completed = ['success' => true, 'state' => 'completed', 'saved' => true, 'cached' => true, 'entry' => nisha_ai_entry($row)];
+        // Previously saved feedback remains readable when optional usage/model
+        // configuration changes. Checking status never requires a provider.
+        try { $completed['usage'] = nisha_ai_usage($pdo, $userId); }
+        catch (Throwable $exception) { /* The completed owner entry is enough. */ }
+        return $completed;
+    }
+    if ($row['status'] === 'pending' && !(bool) $row['claim_expired']) {
+        return ['success' => true, 'state' => 'pending'];
+    }
+    $storedCode = $row['status'] === 'pending' ? 'ai_pending_expired' : (string) $row['error_code'];
+    $failures = [
+        'ai_pending_expired' => ['The earlier AI review did not finish. Your work is retained; retry the same request to try again.', true],
+        'ai_credentials' => ['The site owner needs to check the OpenAI key and project permissions.', false],
+        'ai_provider_limit' => ['OpenAI’s rate or billing limit was reached. Your work is retained; try later.', true],
+        'ai_connection' => ['The AI service connection stopped. Your work is retained; try again later.', true],
+        'ai_provider_error' => ['The AI service could not complete the review. Your work is retained; try again later.', true],
+        'ai_no_speech' => ['No usable speech was recognised. Check your recording or enter a transcript.', false],
+        'ai_refused' => ['The AI service could not review this response. Revise the response or try later.', false],
+        'ai_invalid_response' => ['The AI service returned incomplete feedback. No score was generated; try again later.', true],
+        'ai_incomplete_response' => ['The AI review did not finish. No score was generated; try again later.', true],
+    ];
+    $code = array_key_exists($storedCode, $failures) ? $storedCode : 'ai_unavailable';
+    [$message, $retryable] = $failures[$code] ?? ['AI review is temporarily unavailable. Your work is retained; try again later.', true];
+    return ['success' => true, 'state' => 'failed', 'code' => $code, 'error' => $message, 'retryable' => $retryable];
+}
+
 /** Atomically reserve a provider attempt, or attach an already-completed cache. */
 function nisha_ai_claim(PDO $pdo, int $userId, array $request): array
 {

@@ -80,6 +80,7 @@ function reviewEntry(payload, transcript) {
             limitations: ['AI-generated practice estimate; not an official result.', ...(spoken ? ['Pronunciation and oral fluency were not assessed.'] : [])], transcript: spoken ? transcript : null, word_count: 18, model: 'deterministic-browser-fixture', reviewed_at: new Date().toISOString() } };
 }
 reviewEntry.id = 1000;
+const uiAvailability = { configured: true, transportAvailable: true, studentDailyLimit: 10, maxAudioBytes: 10 * 1024 * 1024 };
 async function enableUiFixture(targetContext = context) {
     // Only the browser copy of public availability is changed. The actual HTTP
     // endpoint remains unconfigured; subsequent UI calls are explicitly intercepted.
@@ -87,7 +88,7 @@ async function enableUiFixture(targetContext = context) {
         const response = await route.fetch();
         let body = await response.text();
         body = body.replace(/(<script id="exam-data" type="application\/json">)([\s\S]*?)(<\/script>)/, (_, open, json, close) => {
-            const value = JSON.parse(json); value.aiReview = { configured: true, transportAvailable: true, studentDailyLimit: 10 };
+            const value = JSON.parse(json); value.aiReview = { ...uiAvailability };
             return open + JSON.stringify(value).replace(/</g, '\\u003c') + close;
         });
         await route.fulfill({ response, body });
@@ -165,13 +166,19 @@ async function upload(buffer, mime = 'audio/wav') {
     ok(await page.locator(`.exam-review-item[data-review-item="${item.id}"]`).getAttribute('open') !== null && await page.locator('#exam-result .ai-review-panel').isVisible() && await page.locator('#exam-result [data-ai-action]').isDisabled(), 'The guest result shortcut opens its real AI panel and sign-in explanation without requesting a review');
     const guest = await api(request(exam, item));
     ok(guest.status === 401 && guest.body.code === 'ai_login_required', 'HTTP rejects guest AI requests before provider processing');
-    const method = await page.request.get(`${base}/api/ai-review.php`);
-    ok(method.status() === 405 && method.headers().allow === 'POST', 'AI endpoint accepts POST only');
+    const method = await page.request.put(`${base}/api/ai-review.php`);
+    ok(method.status() === 405 && method.headers().allow === 'GET, POST', 'AI endpoint accepts only review POSTs and read-only status GETs');
+    const guestStatus = await page.request.get(`${base}/api/ai-review.php?request_id=${crypto.randomUUID()}`);
+    ok(guestStatus.status() === 401, 'Reading a review status requires the owner’s authenticated session');
     email = `ai-browser-${crypto.randomBytes(10).toString('hex')}@example.test`;
     const password = crypto.randomBytes(24).toString('hex');
     await page.goto(`${base}/register.php`);
     await page.locator('#name').fill('AI browser fixture'); await page.locator('#email').fill(email); await page.locator('#password').fill(password); await page.locator('#password_confirmation').fill(password);
     await page.locator('button[type="submit"]').click(); await page.waitForURL('**/dashboard.php');
+    const badStatus = await page.request.get(`${base}/api/ai-review.php?request_id=invalid`);
+    ok(badStatus.status() === 422, 'Authenticated review-status reads validate the request reference');
+    const unknownStatus = await page.request.get(`${base}/api/ai-review.php?request_id=${crypto.randomUUID()}`);
+    ok(unknownStatus.status() === 404 && (await unknownStatus.json()).state === 'not_found', 'An unknown owner review returns a read-only not-found status without requiring an API key');
     const csrf = await api(request(exam, item), false);
     ok(csrf.status === 403 && csrf.body.code === 'csrf_expired', 'Signed-in HTTP requests require the session CSRF token');
     const malformed = await api('{');
@@ -208,10 +215,20 @@ async function upload(buffer, mime = 'audio/wav') {
     await enableUiFixture();
     const sent = [];
     const audioSent = [];
+    const statusRequests = [];
+    const statusReplies = new Map();
+    let responseScenario = null;
     let failFirst = true;
     let holdResolve;
     let holdResponse = false;
-    await context.route('**/api/ai-review.php', async route => {
+    await context.route('**/api/ai-review.php*', async route => {
+        if (route.request().method() === 'GET') {
+            const id = new URL(route.request().url()).searchParams.get('request_id');
+            statusRequests.push(id);
+            const reply = statusReplies.get(id) || { state: 'not_found' };
+            if (reply.state === 'unavailable') return route.abort('connectionreset');
+            return route.fulfill({ status: reply.state === 'not_found' ? 404 : reply.state === 'pending' ? 202 : 200, contentType: 'application/json', body: JSON.stringify({ success: reply.state !== 'not_found', ...reply }) });
+        }
         assert.equal(route.request().method(), 'POST');
         let payload;
         let uploadedAudio = null;
@@ -228,6 +245,14 @@ async function upload(buffer, mime = 'audio/wav') {
         if (holdResponse) await new Promise(resolve => { holdResolve = resolve; });
         const entry = reviewEntry(payload, uploadedAudio ? 'Reliable public transport helps me reach my classes on time.' : payload.transcript);
         if (uploadedAudio) entry.review.mode = 'speaking-audio';
+        if (responseScenario) {
+            const scenario = responseScenario; responseScenario = null;
+            if (scenario === 'html413') return route.fulfill({ status: 413, contentType: 'text/html', body: '<h1>Request Entity Too Large</h1>' });
+            if (scenario === 'html504') return route.fulfill({ status: 504, contentType: 'text/html', body: '<h1>Gateway Timeout</h1>' });
+            statusReplies.set(payload.request_id, scenario === 'drop-completed' ? { state: 'completed', entry } : ['drop-pending', 'in-progress'].includes(scenario) ? { state: 'pending', entry } : { state: 'not_found' });
+            if (scenario === 'in-progress') return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ error: 'This review is already processing.', code: 'ai_in_progress' }) });
+            return route.abort('connectionreset');
+        }
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, saved: true, cached: false, entry, usage: { remaining_today: 9, limit: 10, resets: '00:00 UTC' } }) });
     });
     await start(exam.id); await page.locator('.exam-writing-area').fill(responseText);
@@ -304,6 +329,80 @@ async function upload(buffer, mime = 'audio/wav') {
     ok(audioSent.length === 1 && converted.filename === 'response.wav' && converted.mime === 'audio/wav' && converted.bytes.toString('ascii', 0, 4) === 'RIFF' && converted.bytes.readUInt32LE(24) === 16000 && converted.bytes.readUInt16LE(22) === 1 && converted.bytes.readUInt16LE(34) === 16, 'The real browser audio pipeline converts an uploaded clip to bounded 16 kHz mono PCM WAV');
     await page.locator('#item-response .ai-review-transcript-result summary').click();
     ok(await page.locator('#item-response .ai-review-transcript-result p').isVisible() && await page.locator('#item-response .ai-review-transcript-result p').textContent() === 'Reliable public transport helps me reach my classes on time.', 'Audio feedback persists visibly with the actual transcript supplied by transcription');
+    async function recordingReview(seconds, scenario) {
+        await page.locator('#item-response [data-ai-file]').setInputFiles({ name: `retained-${seconds}.wav`, mimeType: 'audio/wav', buffer: wav(seconds) });
+        responseScenario = scenario;
+        await page.locator('#item-response [data-ai-action]').click();
+    }
+    let postsBefore = sent.length, getsBefore = statusRequests.length;
+    await recordingReview(2, 'drop-completed');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'Recovered the completed review' }).waitFor();
+    ok(sent.length === postsBefore + 1 && statusRequests.length === getsBefore + 1 && await page.locator('#item-response [data-ai-feedback]').isVisible(), 'A dropped speaking response recovers its saved feedback with one read-only check and no second provider submission');
+    postsBefore = sent.length; getsBefore = statusRequests.length;
+    await recordingReview(3, 'drop-missing');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'connection ended' }).waitFor();
+    const missingId = sent.at(-1).request_id;
+    const missingBytes = audioSent.at(-1).bytes;
+    ok(sent.length === postsBefore + 1 && statusRequests.length === getsBefore + 1 && !(await page.locator('#item-response [data-ai-status]').innerText()).includes('Failed to fetch') && await page.locator('#item-response [data-ai-feedback]').isHidden() && await page.locator('#item-response [data-ai-file]').evaluate(input => input.files[0].name === 'retained-3.wav'), 'A connection reset with no saved review retains the recording and explains recovery without exposing raw browser errors or a fake score');
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
+    ok(sent.at(-1).request_id === missingId && audioSent.at(-1).bytes.equals(missingBytes), 'An explicit retry reuses the same review reference and exact prepared WAV for unchanged audio');
+    postsBefore = sent.length;
+    await recordingReview(4, 'drop-pending');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'still processing' }).waitFor();
+    const pendingId = sent.at(-1).request_id;
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'still processing' }).waitFor();
+    ok(sent.length === postsBefore + 1 && await page.locator('#item-response [data-ai-action]').innerText() === 'Check AI review status', 'Pending reviews are checked without uploading the recording again');
+    statusReplies.set(pendingId, { ...statusReplies.get(pendingId), state: 'completed' });
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
+    ok(sent.length === postsBefore + 1 && (await page.locator('#item-response [data-ai-status]').innerText()).includes('Recovered'), 'A pending recording review becomes visible on a later explicit completed-status check');
+    await recordingReview(5, 'drop-pending');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'still processing' }).waitFor();
+    const changedAudioId = sent.at(-1).request_id;
+    await page.locator('#item-response [data-ai-file]').setInputFiles({ name: 'changed-after-submit.wav', mimeType: 'audio/wav', buffer: wav(6) });
+    statusReplies.set(changedAudioId, { ...statusReplies.get(changedAudioId), state: 'completed' });
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'changed while' }).waitFor();
+    ok(await page.locator('#item-response [data-ai-feedback]').isHidden(), 'Recovered audio feedback is not attached to a different recording selected while the original review was pending');
+    postsBefore = sent.length;
+    await recordingReview(7, 'drop-pending');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'still processing' }).waitFor();
+    const restoredId = sent.at(-1).request_id;
+    uiAvailability.configured = false; uiAvailability.transportAvailable = false;
+    await page.reload(); await page.locator('#item-response .ai-review-panel').waitFor();
+    ok(await page.locator('#item-response [data-ai-file]').evaluate(input => input.files.length === 0) && await page.locator('#item-response [data-ai-action]').isEnabled(), 'After reload a saved review can still be checked without the original file or currently enabled provider setup');
+    statusReplies.set(restoredId, { ...statusReplies.get(restoredId), state: 'completed' });
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-feedback]:not([hidden])').waitFor();
+    ok(sent.length === postsBefore + 1 && await page.locator('#item-response [data-ai-action]').isDisabled(), 'Read-only recovery restores saved audio feedback while new paid reviews remain disabled');
+    uiAvailability.configured = true; uiAvailability.transportAvailable = true;
+    await page.reload(); await page.locator('#item-response .ai-review-panel').waitFor();
+    getsBefore = statusRequests.length;
+    await recordingReview(8, 'html413');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'rejected the recording upload as too large' }).waitFor();
+    ok(statusRequests.length === getsBefore && await page.locator('#item-response [data-ai-feedback]').isHidden(), 'A hosting HTML 413 response explains upload limits and does not pretend that scoring completed');
+    postsBefore = sent.length; getsBefore = statusRequests.length;
+    await recordingReview(9, 'html504');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'did not return AI feedback in time' }).waitFor();
+    ok(sent.length === postsBefore + 1 && statusRequests.length === getsBefore + 1, 'A hosting HTML gateway timeout checks saved status before allowing an explicit resubmission');
+    await recordingReview(10, 'in-progress');
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'still processing' }).waitFor();
+    const inProgressId = sent.at(-1).request_id;
+    postsBefore = sent.length;
+    statusReplies.set(inProgressId, { state: 'failed', code: 'ai_pending_expired', error: 'The earlier review did not finish. Retry the same request.' });
+    await page.locator('#item-response [data-ai-action]').click();
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'earlier review did not finish' }).waitFor();
+    ok(sent.length === postsBefore && await page.locator('#item-response [data-ai-action]').innerText() === 'Retry AI review', 'Structured in-progress replies use status checks, and a confirmed failed review requires a separate explicit retry');
+    uiAvailability.maxAudioBytes = 2 * 1024 * 1024;
+    await page.reload(); await page.locator('#item-response .ai-review-panel').waitFor();
+    postsBefore = sent.length;
+    await recordingReview(75, null);
+    await page.locator('#item-response [data-ai-status]').filter({ hasText: 'above this website’s 2.00 MB upload limit' }).waitFor();
+    ok(sent.length === postsBefore && (await page.locator('#item-response [data-ai-upload-info]').innerText()).includes('2.29 MB') && await page.locator('#item-response [data-ai-file]').evaluate(input => input.files.length === 1), 'A converted WAV above the actual PHP upload limit is stopped before POST, with its prepared size shown and original recording retained');
+    uiAvailability.maxAudioBytes = 10 * 1024 * 1024;
+    await page.reload(); await page.locator('#item-response .ai-review-panel').waitFor();
     const callsBeforeBadAudio = sent.length;
     await page.locator('#item-response [data-ai-file]').setInputFiles({ name: 'corrupt-recording.wav', mimeType: 'audio/wav', buffer: Buffer.from('not-real-audio'.repeat(30)) });
     ok(await page.locator('#item-response [data-ai-feedback]').isHidden(), 'Selecting a new recording hides feedback for the previous recording');
@@ -328,6 +427,7 @@ async function upload(buffer, mime = 'audio/wav') {
     await page.addInitScript(({ key, state, marker }) => { if (!sessionStorage.getItem(marker)) { localStorage.setItem(key, JSON.stringify(state)); sessionStorage.setItem(marker, 'used'); } }, writingState);
     await page.reload(); await page.locator('.exam-writing-area').waitFor();
     ok(await page.locator('.ai-review-panel').count() === 0, 'Timed mocks do not expose AI coaching while the test is running');
+    const persistedPayload = request(exam, item);
     execFileSync(php, ['-r', `
 require 'includes/ai-review-service.php';
 $s=db()->prepare('SELECT id FROM users WHERE email=?'); $s->execute([$argv[1]]); $user=['id'=>(int)$s->fetchColumn()];
@@ -338,7 +438,10 @@ $raw=['assessable'=>true,'summary'=>'<img src=x onerror="window.__historyXss=1">
 'strengths'=>['A relevant central idea.'],'improvements'=>[['issue'=>'Develop the example.','evidence'=>'public transport','suggestion'=>'Explain a practical benefit.','example'=>'Frequent buses reduce waiting times.']],
 'next_steps'=>['Add an example.','Check grammar.','Review the task.'],'improved_sample'=>'Learning example: Frequent buses help students arrive on time.','limitations'=>[]];
 nisha_ai_submit($user,$payload,null,static fn()=>['status'=>200,'body'=>json_encode(['status'=>'completed','output'=>[['content'=>[['type'=>'output_text','text'=>json_encode($raw)]]]]])]);
-`, email, JSON.stringify(request(exam, item))], { cwd: root, stdio: 'pipe' });
+`, email, JSON.stringify(persistedPayload)], { cwd: root, stdio: 'pipe' });
+    const completedStatus = await page.request.get(`${base}/api/ai-review.php?request_id=${persistedPayload.request_id}`);
+    const completedData = await completedStatus.json();
+    ok(completedStatus.status() === 200 && completedData.state === 'completed' && completedData.entry.response === responseText && completedData.entry.attempt_id === persistedPayload.attempt_id, 'The real owner-only status endpoint returns a persisted completed review while provider setup is disabled');
     await page.goto(`${base}/ai-reviews.php`);
     const history = page.locator('.ai-history-review');
     ok(await history.count() === 1 && (await history.locator('summary').first().innerText()).includes('AI practice estimate'), 'A real persisted provider fixture appears in the student’s coaching history');

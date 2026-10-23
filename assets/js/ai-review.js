@@ -3,19 +3,21 @@
     const panels = new WeakMap();
     const blobKeys = new WeakMap();
     const wavCache = new WeakMap();
+    const reviewError = (message, details = {}) => Object.assign(new Error(message), { userMessage: message, ...details });
+    const sizeText = (bytes) => bytes >= 1048576 ? `${(bytes / 1048576).toFixed(2)} MB` : `${Math.ceil(bytes / 1024)} KB`;
     async function boundedWav(blob) {
         if (wavCache.has(blob)) return wavCache.get(blob);
         const conversion = (async () => {
-            if (blob.size < 100 || blob.size > 10 * 1024 * 1024) throw new Error('Choose a recording between 100 bytes and 10 MB, with no more than 5 minutes of audio.');
+            if (blob.size < 100 || blob.size > 10 * 1024 * 1024) throw reviewError('Choose a recording between 100 bytes and 10 MB, with no more than 5 minutes of audio.');
             const Context = window.AudioContext || window.webkitAudioContext;
             const Offline = window.OfflineAudioContext || window.webkitOfflineAudioContext;
-            if (!Context || !Offline) throw new Error('This browser cannot prepare audio for AI review. Use a supported browser or enter a transcript of what you said.');
+            if (!Context || !Offline) throw reviewError('This browser cannot prepare audio for AI review. Use a supported browser or enter a transcript of what you said.');
             let context;
             let decoded;
             try { context = new Context(); decoded = await context.decodeAudioData(await blob.arrayBuffer()); }
-            catch (error) { throw new Error('This browser could not decode the recording. Choose a compatible WAV, MP3, M4A or WebM clip, or enter a transcript.'); }
+            catch (error) { throw reviewError('This browser could not decode the recording. Choose a compatible WAV, MP3, M4A or WebM clip, or enter a transcript.'); }
             finally { if (context) await context.close().catch(() => {}); }
-            if (!Number.isFinite(decoded.duration) || decoded.duration < 0.5 || decoded.duration > 300) throw new Error('AI review accepts recordings from half a second up to 5 minutes. Use a shorter clip or enter its transcript.');
+            if (!Number.isFinite(decoded.duration) || decoded.duration < 0.5 || decoded.duration > 300) throw reviewError('AI review accepts recordings from half a second up to 5 minutes. Use a shorter clip or enter its transcript.');
             const length = Math.ceil(decoded.duration * 16000);
             const offline = new Offline(1, length, 16000);
             const source = offline.createBufferSource(); source.buffer = decoded; source.connect(offline.destination); source.start();
@@ -102,6 +104,7 @@
         panel.dataset.aiItem = options.item.id;
         panel.setAttribute('aria-label', 'AI writing and speaking coach');
         const draft = options.draft || {};
+        const audioLimit = Number.isFinite(options.config?.maxAudioBytes) && options.config.maxAudioBytes >= 0 ? Math.min(options.config.maxAudioBytes, 10 * 1024 * 1024) : 10 * 1024 * 1024;
         const initialEntry = [...(options.entries || [])].reverse().find((entry) => entry?.review && entry.exam_id === options.examId && entry.exam_version === options.examVersion && entry.attempt_id === options.attemptId && entry.item_id === options.item.id && entry.response === options.getResponse());
         if (typeof draft.transcript !== 'string') draft.transcript = initialEntry?.review.mode === 'speaking-transcript' ? initialEntry.review.transcript || '' : '';
         if (!draft.sourceMode && initialEntry?.review.mode === 'speaking-audio') draft.sourceMode = 'recording';
@@ -117,6 +120,9 @@
         let recordStatus;
         let recordingOption;
         let selectedFile = null;
+        let preparedSource = null;
+        let preparedBytes = null;
+        let uploadInfo;
         if (spoken) {
             const modeLabel = node('label', 'ai-review-label', 'Choose what the AI should review');
             mode = node('select', 'ai-review-source'); mode.dataset.aiSource = 'true';
@@ -134,6 +140,7 @@
             file = node('input', 'ai-review-file'); file.type = 'file'; file.dataset.aiFile = 'true'; file.accept = '.webm,.wav,.mp3,.m4a,.mp4,audio/webm,audio/wav,audio/mpeg,audio/mp4,video/mp4,video/webm';
             fileLabel.append(file); panel.append(fileLabel);
             recordStatus = node('p', 'ai-review-recording-status'); recordStatus.dataset.aiRecordingStatus = 'true'; panel.append(recordStatus);
+            uploadInfo = node('p', 'ai-review-recording-status'); uploadInfo.dataset.aiUploadInfo = 'true'; uploadInfo.hidden = true; panel.append(uploadInfo);
             mode.addEventListener('change', () => { draft.sourceMode = mode.value; sourceEdited = true; sourceRevision++; changed(); refresh(); });
             transcript.addEventListener('input', () => { draft.transcript = transcript.value; sourceEdited = true; sourceRevision++; changed(); refresh(); });
             file.addEventListener('change', () => { selectedFile = file.files?.[0] || null; sourceEdited = true; sourceRevision++; changed(); refresh(); });
@@ -151,6 +158,8 @@
         let observedRecording = recordingBlob();
         let observedResponse = response();
         let errorMessage = '';
+        let submittedRequestId = null;
+        let submittedSourceRevision = null;
         function changed() { errorMessage = ''; options.onChange?.(draft, mountedEntries); }
         function response() { const value = options.getResponse(); return typeof value === 'string' ? value : ''; }
         function recordingBlob() { const value = options.getRecording?.(); return value instanceof Blob ? value : value?.blob instanceof Blob ? value.blob : null; }
@@ -160,6 +169,9 @@
         }
         function unavailable() {
             if (!options.signedIn) return 'Sign in to request and save AI coaching. Keep a copy of your work before leaving this page.';
+            // Reading an already submitted review requires neither audio nor a
+            // currently enabled provider connection or paid-request setup.
+            if (draft.uncertainRequestId) return '';
             if (options.saved === false && !options.guided) return 'Save this completed test to your account before requesting AI coaching. Use “Retry saving to account” above.';
             if (!options.config?.configured) return 'AI coaching is awaiting the site owner’s OpenAI API setup. You can keep practising and use the self-review checklist.';
             if (!options.config?.transportAvailable) return 'AI coaching is temporarily unavailable. The site owner needs to enable PHP HTTPS requests. Your work stays available.';
@@ -182,11 +194,14 @@
                 panel.querySelector('.ai-review-transcript-input').hidden = mode.value !== 'transcript';
                 panel.querySelector('.ai-review-file-input').hidden = mode.value !== 'file';
                 recordStatus.hidden = mode.value !== 'recording';
-                recordStatus.textContent = blob ? `A recording is ready in this tab (${(blob.size / 1048576).toFixed(2)} MB). It will be uploaded only when you request an AI review.` : 'No recording is available in this tab. Record your response above, upload a saved recording, or enter its transcript.';
+                recordStatus.textContent = blob ? `A recording is ready in this tab (${(blob.size / 1048576).toFixed(2)} MB before WAV conversion). It will be uploaded only when you request an AI review.` : 'No recording is available in this tab. Record your response above, upload a saved recording, or enter its transcript.';
+                const selectedAudio = mode.value === 'recording' ? blob : mode.value === 'file' ? selectedFile : null;
+                uploadInfo.hidden = !selectedAudio || preparedSource !== selectedAudio || preparedBytes === null;
+                if (!uploadInfo.hidden) uploadInfo.textContent = `Prepared WAV upload: ${sizeText(preparedBytes)}. This website’s upload limit: ${sizeText(audioLimit)}. Compressed recordings can grow during conversion.`;
                 validSource = mode.value === 'transcript' ? draft.transcript.trim().length > 0 : mode.value === 'recording' ? Boolean(blob) : Boolean(selectedFile);
             }
-            action.disabled = busy || Boolean(unavailableMessage) || !validSource;
-            action.textContent = busy ? 'Reviewing your response…' : errorMessage ? 'Retry AI review' : 'Review with AI';
+            action.disabled = busy || Boolean(unavailableMessage) || (!validSource && !draft.uncertainRequestId);
+            action.textContent = busy ? 'Reviewing your response…' : draft.uncertainRequestId ? 'Check AI review status' : errorMessage ? 'Retry AI review' : 'Review with AI';
             panel.setAttribute('aria-busy', String(busy));
             if (!busy && errorMessage) status.textContent = errorMessage;
             const entry = matchingEntry();
@@ -206,22 +221,88 @@
             if (!blobKeys.has(blob)) blobKeys.set(blob, requestId());
             return JSON.stringify([responseText, blobKeys.get(blob), 'audio']);
         }
+        function clearUncertainRequest() {
+            delete draft.uncertainRequestId;
+            delete draft.uncertainResponse;
+            submittedRequestId = null;
+            submittedSourceRevision = null;
+            options.onChange?.(draft, mountedEntries);
+        }
+        function acceptEntry(entry, expectedResponse, revision, data, recovered = false) {
+            if (!entry?.review || entry.exam_id !== options.examId || entry.exam_version !== options.examVersion || entry.item_id !== options.item.id || entry.attempt_id !== options.attemptId || entry.response !== expectedResponse) throw reviewError('The feedback could not be matched to this response. Your work is retained; open your saved coaching history before retrying.', { uncertain: true });
+            mountedEntries = mountedEntries.filter((saved) => saved.id !== entry.id); mountedEntries.push(entry);
+            if (revision !== null && sourceRevision === revision) sourceEdited = false;
+            clearUncertainRequest();
+            status.textContent = `AI feedback saved to your account.${recovered ? ' Recovered the completed review without sending another provider request.' : ''}${data.cached ? ' A previous review was reused without another provider request.' : ''}${data.usage ? ` ${data.usage.remaining_today} of ${data.usage.limit} review requests remain today; reset ${data.usage.resets}.` : ''}`;
+            if (response() !== expectedResponse || sourceEdited || (spoken && mode.value === 'transcript' && entry.review.mode === 'speaking-transcript' && draft.transcript !== entry.review.transcript)) status.textContent += ' Your response changed while this review was running. Review the updated response separately.';
+            lastRenderedEntry = null;
+        }
+        function requestFailure(statusCode, audio) {
+            if (statusCode === 413) return reviewError('The website rejected the recording upload as too large. Your recording is retained in this tab. Use a shorter clip or a transcript; the site owner can check PHP and hosting upload limits.');
+            if (statusCode === 401) return reviewError('Sign in again before requesting AI coaching. Keep a copy of your response and recording first.');
+            if (statusCode === 403) return reviewError('The website blocked this AI request. Your work is retained. Try signing in again; if it continues, the site owner needs to check the hosting request rules.');
+            if ([408, 504].includes(statusCode)) return reviewError('The website did not return AI feedback in time. Your work is retained; checking whether a review was saved before retrying.', { uncertain: true });
+            if ([502, 503].includes(statusCode)) return reviewError('The website is temporarily unable to return AI feedback. Your work is retained; checking whether a review was saved before retrying.', { uncertain: true });
+            return reviewError(`The website returned an unreadable AI response${audio ? ' after the recording upload' : ''}. Your work is retained; checking for saved feedback.`, { uncertain: true });
+        }
+        async function savedReviewStatus(id) {
+            const controller = new AbortController();
+            const timeout = window.setTimeout(() => controller.abort(), 15000);
+            try {
+                const result = await fetch(`api/ai-review.php?request_id=${encodeURIComponent(id)}`, { method: 'GET', credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }, signal: controller.signal });
+                let data;
+                try { data = await result.json(); } catch (_) { return { state: 'unavailable' }; }
+                if (result.status === 404 && data.state === 'not_found') return { state: 'not_found' };
+                if (result.status === 401) return { state: 'unavailable', error: 'Sign in again to check for saved feedback. Keep a copy of your response and recording first.' };
+                if (!result.ok || !['completed', 'pending', 'failed'].includes(data.state)) return { state: 'unavailable' };
+                return data;
+            } catch (_) { return { state: 'unavailable' }; }
+            finally { window.clearTimeout(timeout); }
+        }
+        let waitingForReview = false;
+        async function recoverReview(failureMessage, revision = null) {
+            const id = draft.uncertainRequestId;
+            if (revision === null && submittedRequestId === id) revision = submittedSourceRevision;
+            const expectedResponse = typeof draft.uncertainResponse === 'string' ? draft.uncertainResponse : response();
+            status.textContent = 'Checking your account for saved feedback. This check does not send another request to OpenAI.';
+            const result = await savedReviewStatus(id);
+            if (result.state === 'completed') { acceptEntry(result.entry, expectedResponse, revision, result, true); errorMessage = ''; return; }
+            if (result.state === 'pending') {
+                waitingForReview = true;
+                errorMessage = 'Your AI review is still processing. Keep this page open and choose “Check AI review status” shortly. Checking does not send another recording or use another review request.';
+            } else if (result.state === 'failed') {
+                clearUncertainRequest();
+                errorMessage = typeof result.error === 'string' ? result.error : 'The earlier AI review did not finish. Your work is retained. Choose “Retry AI review” to try again.';
+            } else if (result.state === 'not_found') {
+                clearUncertainRequest();
+                errorMessage = failureMessage || 'No saved review was found for this request. Your work is retained. Choose “Retry AI review” to send it again.';
+            } else errorMessage = result.error || `${failureMessage || 'The connection ended before AI feedback was confirmed.'} We could not check for saved feedback. Reconnect and choose “Check AI review status” before sending it again.`;
+            status.textContent = errorMessage;
+        }
         action.addEventListener('click', async () => {
             if (busy || action.disabled) return;
-            busy = true; errorMessage = ''; refresh(); options.onStatus?.('reviewing');
+            busy = true; waitingForReview = false; errorMessage = ''; refresh(); options.onStatus?.('reviewing');
             const controller = new AbortController();
             const timeout = window.setTimeout(() => controller.abort(), 115000);
+            let reviewRevision = null;
             try {
+                // A lost response may already have produced paid, saved feedback.
+                // Explicit checks and automatic recovery never submit another POST.
+                if (draft.uncertainRequestId) { await recoverReview(); return; }
                 const responseText = response();
-                const reviewRevision = sourceRevision;
+                reviewRevision = sourceRevision;
                 const selectedMode = spoken ? mode.value : 'writing';
                 const text = spoken ? draft.transcript : responseText;
                 const originalAudio = spoken && selectedMode !== 'transcript' ? selectedMode === 'recording' ? recordingBlob() : selectedFile : null;
-                if (spoken && selectedMode !== 'transcript' && !originalAudio) throw new Error('Choose a recording first, or enter a transcript.');
+                if (spoken && selectedMode !== 'transcript' && !originalAudio) throw reviewError('Choose a recording first, or enter a transcript.');
                 if (originalAudio) status.textContent = 'Preparing your recording as a bounded WAV file before upload…';
                 const audio = originalAudio ? await boundedWav(originalAudio) : null;
-                if (audio && (audio.size < 100 || audio.size > 10 * 1024 * 1024)) throw new Error('Use a recording between 100 bytes and 10 MB. Your response is retained.');
-                status.textContent = audio ? 'Uploading and transcribing your recording, then preparing feedback. Keep this page open.' : 'Preparing your AI feedback. Your response is retained while you wait.';
+                if (audio) {
+                    preparedSource = originalAudio; preparedBytes = audio.size; refresh();
+                    if (audio.size < 100 || audio.size > 10 * 1024 * 1024) throw reviewError('Use a recording between 100 bytes and 10 MB. Your response is retained.');
+                    if (audio.size > audioLimit) throw reviewError(`The prepared WAV is ${sizeText(audio.size)}, above this website’s ${sizeText(audioLimit)} upload limit. Your recording is retained in this tab. Use a shorter recording or enter its transcript; the site owner can increase PHP upload limits.`);
+                }
+                status.textContent = audio ? `Uploading ${sizeText(audio.size)} of prepared WAV audio, then transcribing and preparing feedback. Keep this page open.` : 'Preparing your AI feedback. Your response is retained while you wait.';
                 const key = await sourceKey(audio, text, responseText, selectedMode);
                 if (draft.sourceKey !== key || !draft.requestId) { draft.sourceKey = key; draft.requestId = requestId(); changed(); }
                 const payload = { request_id: draft.requestId, exam_id: options.examId, exam_version: options.examVersion, item_id: options.item.id, attempt_id: options.attemptId, response: responseText };
@@ -231,24 +312,32 @@
                     body = new FormData(); Object.entries(payload).forEach(([name, value]) => body.append(name, value));
                     body.append('audio', audio, 'response.wav');
                 } else { if (spoken) payload.transcript = text; body = JSON.stringify(payload); headers['Content-Type'] = 'application/json'; }
-                const result = await fetch('api/ai-review.php', { method: 'POST', credentials: 'same-origin', headers, body, signal: controller.signal });
+                draft.uncertainRequestId = draft.requestId; draft.uncertainResponse = responseText; options.onChange?.(draft, mountedEntries);
+                submittedRequestId = draft.requestId; submittedSourceRevision = reviewRevision;
+                let result;
+                try { result = await fetch('api/ai-review.php', { method: 'POST', credentials: 'same-origin', headers, body, signal: controller.signal }); }
+                catch (error) {
+                    const retained = audio ? 'Your recording is retained in this tab. Retry with the same recording or enter its transcript.' : 'Your written response is retained.';
+                    const message = error.name === 'AbortError' ? `The AI review timed out before feedback was received. ${retained}` : navigator.onLine === false ? `You are offline. Reconnect before checking the review. ${retained}` : `The recording or review connection ended before feedback was received. ${retained}`;
+                    throw reviewError(message, { uncertain: true });
+                }
                 let data;
-                try { data = await result.json(); } catch (error) { throw new Error('The AI service returned an unreadable response. Your work is retained; try again later.'); }
-                if (!result.ok || !data.success || !data.entry?.review) throw new Error(data.error || 'AI review is unavailable. Your work is retained; try again later.');
-                const entry = data.entry;
-                if (entry.exam_id !== options.examId || entry.exam_version !== options.examVersion || entry.item_id !== options.item.id || entry.attempt_id !== options.attemptId || entry.response !== responseText) throw new Error('The feedback could not be matched to this response. Your work is retained; please reload your saved review.');
-                mountedEntries = mountedEntries.filter((saved) => saved.id !== entry.id); mountedEntries.push(entry);
-                if (sourceRevision === reviewRevision) sourceEdited = false;
-                // The source may have changed while the provider was working. The
-                // old review is retained, but never attached to the changed work.
-                options.onChange?.(draft, mountedEntries);
-                status.textContent = `AI feedback saved to your account.${data.cached ? ' A previous review was reused without another provider request.' : ''}${data.usage ? ` ${data.usage.remaining_today} of ${data.usage.limit} review requests remain today; reset ${data.usage.resets}.` : ''}`;
-                if (response() !== responseText || (spoken && selectedMode === 'transcript' && draft.transcript !== text)) status.textContent += ' Your response changed while this review was running. Review the updated response separately.';
-                lastRenderedEntry = null;
+                try { data = await result.json(); } catch (_) { throw requestFailure(result.status, Boolean(audio)); }
+                if (!data || typeof data !== 'object' || Array.isArray(data)) throw requestFailure(result.status, Boolean(audio));
+                if (data.code === 'ai_in_progress') throw reviewError('Your AI review is already processing. Checking for saved feedback.', { uncertain: true });
+                if (!result.ok || !data.success) { clearUncertainRequest(); throw reviewError(typeof data.error === 'string' ? data.error : 'AI review is unavailable. Your work is retained; try again later.'); }
+                if (!data.entry?.review) throw requestFailure(result.status, Boolean(audio));
+                acceptEntry(data.entry, responseText, reviewRevision, data);
             } catch (error) {
-                errorMessage = error.name === 'AbortError' ? 'The AI review timed out. Your response and review reference are retained; retry to check for completed feedback.' : error.message;
-                status.textContent = errorMessage;
-            } finally { window.clearTimeout(timeout); busy = false; refresh(); options.onStatus?.(errorMessage ? 'error' : 'ready'); }
+                if (error.uncertain && draft.uncertainRequestId) {
+                    try { await recoverReview(error.userMessage, reviewRevision); }
+                    catch (_) { errorMessage = 'Saved feedback could not be confirmed. Your work is retained. Check your AI coaching history before retrying.'; }
+                } else {
+                    clearUncertainRequest();
+                    errorMessage = error.userMessage || 'The browser could not prepare this AI review. Your work is retained. Try a compatible recording or enter its transcript.';
+                }
+                if (errorMessage) status.textContent = errorMessage;
+            } finally { window.clearTimeout(timeout); busy = false; refresh(); options.onStatus?.(waitingForReview ? 'reviewing' : errorMessage ? 'error' : 'ready'); }
         });
         const controller = { refresh, addEntries: (entries) => { mountedEntries = [...mountedEntries, ...(entries || [])]; refresh(); } };
         panels.set(panel, controller); refresh(); return panel;

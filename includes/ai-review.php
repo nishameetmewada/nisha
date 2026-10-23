@@ -31,14 +31,36 @@ function nisha_ai_configured(): bool
 function nisha_ai_transport_available(): bool
 { return function_exists('curl_init') || (extension_loaded('openssl') && filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)); }
 
+/** Parse PHP's byte shorthand without assuming a compressed clip's upload size. */
+function nisha_ai_ini_limit_bytes(string $value): int
+{
+    if (!preg_match('/\A\s*(-?[0-9]+)\s*([KMG]?)\s*\z/iD', $value, $match)) return 0;
+    $quantity = (float) $match[1];
+    // PHP treats non-positive upload/post limits as unlimited. The application
+    // still applies its own 10 MB cap below.
+    if ($quantity <= 0) return PHP_INT_MAX;
+    $bytes = $quantity * (1024 ** match (strtoupper($match[2])) { 'K' => 1, 'M' => 2, 'G' => 3, default => 0 });
+    return $bytes >= PHP_INT_MAX ? PHP_INT_MAX : (int) $bytes;
+}
+
+/** Effective WAV cap leaves room for the response fields and multipart headers. */
+function nisha_ai_max_audio_bytes(?string $uploadLimit = null, ?string $postLimit = null): int
+{
+    $upload = nisha_ai_ini_limit_bytes($uploadLimit ?? (string) ini_get('upload_max_filesize'));
+    $post = nisha_ai_ini_limit_bytes($postLimit ?? (string) ini_get('post_max_size'));
+    $postAudio = $post === PHP_INT_MAX ? PHP_INT_MAX : max(0, $post - 65536);
+    return min(10 * 1024 * 1024, $upload, $postAudio);
+}
+
 function nisha_ai_public_config(): array
 {
+    $maxAudioBytes = filter_var(ini_get('file_uploads'), FILTER_VALIDATE_BOOLEAN) ? nisha_ai_max_audio_bytes() : 0;
     try {
         $settings = nisha_ai_settings();
         return ['configured' => nisha_ai_configured(), 'transportAvailable' => nisha_ai_transport_available(), 'model' => $settings['model'],
-            'transcriptionModel' => $settings['transcription_model'], 'studentDailyLimit' => $settings['daily_user_limit']];
+            'transcriptionModel' => $settings['transcription_model'], 'studentDailyLimit' => $settings['daily_user_limit'], 'maxAudioBytes' => $maxAudioBytes];
     } catch (NishaAiException $exception) {
-        return ['configured' => false, 'transportAvailable' => false, 'studentDailyLimit' => 0];
+        return ['configured' => false, 'transportAvailable' => false, 'studentDailyLimit' => 0, 'maxAudioBytes' => $maxAudioBytes];
     }
 }
 
