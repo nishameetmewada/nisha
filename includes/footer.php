@@ -6,7 +6,7 @@
         </div>
         <div class="footer-links"><span>YOUR NEXT CHAPTER</span><a href="exams.php">Full mock exams</a><a href="generated-mocks.php">Generated mock library</a><a href="generated-practice.php">Generated questions</a><a href="practice.php?exam=ielts">IELTS starter practice</a><a href="practice.php?exam=pte">PTE starter practice</a><a href="dashboard.php">Your progress</a></div>
         <div class="footer-links"><span>GROW WITH NISHA</span><a href="question-bank.php">Reviewed question bank</a><a href="mock-library.php">Reviewed mock library</a><a href="coaching.php">Teacher coaching</a><a href="teacher-portal.php">Teach with NISHA</a><a href="pricing.php">Access plans</a></div>
-        <div class="footer-note"><?= icon('heart', '', 24) ?><p>Made for big dreams<br>and everyday progress.</p><a href="register.php">Start your story <?= icon('arrow', '', 16) ?></a></div>
+        <div class="footer-note"><?= icon('heart', '', 24) ?><p>Made for big dreams<br>and everyday progress.</p><a href="register.php">Start your story <?= icon('arrow', '', 16) ?></a><?php if (!empty($publicSiteDetails['support_email'])): ?><a href="mailto:<?= e($publicSiteDetails['support_email']) ?>">Contact student support</a><?php endif; ?></div>
     </div>
     <div class="container footer-bottom"><p>© <?= date('Y') ?> NISHA. Keep moving forward.</p><p>Independent practice platform. Not affiliated with IELTS or Pearson PTE.</p></div>
 </footer>

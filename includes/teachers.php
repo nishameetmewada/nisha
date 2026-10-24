@@ -133,12 +133,32 @@ function nisha_teacher_page_data(array $user): array
     return ['profile' => nisha_teacher_profile(db(), (int) $user['id']), 'videos' => $videos, 'rewards' => $rewards, 'totals' => $totals, 'settings' => nisha_teacher_settings()];
 }
 
-function nisha_teacher_catalog(?string $course = null, ?string $skill = null): array
+/** Shared filters keep the result count and displayed lessons consistent. */
+function nisha_teacher_catalog_filters(?string $course = null, ?string $skill = null, ?string $search = null): array
 {
     $where = ["v.status='published'", "p.status='approved'"]; $parameters = [];
     if ($course !== null && $course !== '') { $where[] = 'v.course_id=?'; $parameters[] = $course; }
     if ($skill !== null && $skill !== '') { $where[] = 'v.skill=?'; $parameters[] = $skill; }
-    $q = db()->prepare('SELECT v.*,p.display_name AS teacher_name FROM coaching_videos v JOIN teacher_profiles p ON p.user_id=v.teacher_id WHERE ' . implode(' AND ', $where) . ' ORDER BY v.created_at DESC,v.id DESC LIMIT 100');
+    if ($search !== null && trim($search) !== '') {
+        $term = '%' . strtr(trim($search), ['=' => '==', '%' => '=%', '_' => '=_']) . '%';
+        $where[] = "(v.title LIKE ? ESCAPE '=' OR v.description LIKE ? ESCAPE '=' OR p.display_name LIKE ? ESCAPE '=')";
+        array_push($parameters, $term, $term, $term);
+    }
+    return [implode(' AND ', $where), $parameters];
+}
+
+function nisha_teacher_catalog_count(?string $course = null, ?string $skill = null, ?string $search = null): int
+{
+    [$where, $parameters] = nisha_teacher_catalog_filters($course, $skill, $search);
+    $q = db()->prepare('SELECT COUNT(*) FROM coaching_videos v JOIN teacher_profiles p ON p.user_id=v.teacher_id WHERE ' . $where);
+    $q->execute($parameters);
+    return (int) $q->fetchColumn();
+}
+
+function nisha_teacher_catalog(?string $course = null, ?string $skill = null, ?string $search = null): array
+{
+    [$where, $parameters] = nisha_teacher_catalog_filters($course, $skill, $search);
+    $q = db()->prepare('SELECT v.*,p.display_name AS teacher_name FROM coaching_videos v JOIN teacher_profiles p ON p.user_id=v.teacher_id WHERE ' . $where . ' ORDER BY v.created_at DESC,v.id DESC LIMIT 100');
     $q->execute($parameters);
     return $q->fetchAll();
 }

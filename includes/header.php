@@ -1,6 +1,8 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/ui.php';
+require_once __DIR__ . '/site-settings.php';
+$publicSiteDetails = nisha_site_settings();
 $pageTitle = $pageTitle ?? 'Your next chapter starts here';
 $pageDescription = $pageDescription ?? 'Find your confidence with NISHA. Thoughtful IELTS and PTE practice, interactive exercises, and a little progress every day.';
 $activePage = $activePage ?? 'home';
@@ -57,3 +59,6 @@ $student = current_user();
         <button class="menu-toggle" type="button" aria-label="Open navigation" aria-expanded="false" aria-controls="main-nav"><?= icon('menu') ?></button>
     </div>
 </header>
+<?php if ($publicSiteDetails['announcement_enabled'] && $publicSiteDetails['announcement_text'] !== ''): ?>
+<aside class="site-announcement" aria-label="Website announcement"><div class="container"><?= e($publicSiteDetails['announcement_text']) ?></div></aside>
+<?php endif; ?>

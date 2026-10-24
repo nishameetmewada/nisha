@@ -206,11 +206,17 @@ function current_user(): ?array
     }
 
     try {
+        require_once __DIR__ . '/admin-accounts.php';
+        $sessionVersion = is_int($_SESSION['auth_version'] ?? null) ? $_SESSION['auth_version'] : 0;
+        if (!nisha_account_session_valid(db(), $userId, $sessionVersion)) {
+            unset($_SESSION['user_id'], $_SESSION['auth_version'], $_SESSION['csrf_token']);
+            return null;
+        }
         $statement = db()->prepare('SELECT id, name, email, created_at FROM users WHERE id = ?');
         $statement->execute([$userId]);
         $user = $statement->fetch() ?: null;
         if ($user === null) {
-            unset($_SESSION['user_id']);
+            unset($_SESSION['user_id'], $_SESSION['auth_version']);
         }
     } catch (Throwable $exception) {
         $user = null;
@@ -235,8 +241,14 @@ function require_login(): array
 
 function sign_in(int $userId): void
 {
+    require_once __DIR__ . '/admin-accounts.php';
+    $version = nisha_account_login_version(db(), $userId);
+    if ($version === null) {
+        throw new InvalidArgumentException('This account is unavailable. Contact the site administrator.');
+    }
     session_regenerate_id(true);
     $_SESSION['user_id'] = $userId;
+    $_SESSION['auth_version'] = $version;
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
     unset($_SESSION['login_failures'], $_SESSION['login_blocked_until']);
 }

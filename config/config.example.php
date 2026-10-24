@@ -25,7 +25,7 @@ return [
     'payment_amount_minor' => 2900,
     'payment_currency' => 'aud',
     'payment_access_days' => 30,
-    'site_url' => '',
+    'site_url' => 'https://nishaglobal.com',
     'stripe_secret_key' => '',
     'stripe_webhook_secret' => '',
     // Rewards are 90% of verified positive net profit, shared by qualified views.

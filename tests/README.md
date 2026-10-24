@@ -77,14 +77,14 @@ The AI browser suite also restores an old local result, preserves its responses/
 ## All-page browser audit
 
 Run `node tests/pages-browser-smoke.js` against the local PHP server and imported
-database. This loopback-only suite checks 19 public, student, owner and reviewer pages in
-light and dark mode at 320, 390, 768 and 1440 pixels. Its 186 checks cover readable
+database. This loopback-only suite checks 22 public, student, owner and reviewer pages in
+light and dark mode at 320, 390, 768 and 1440 pixels. Its 216 checks cover readable
 inputs, mobile overflow, images, scripts and styles, JavaScript exceptions,
 navigation and keyboard theme controls, internal links and anchors, legacy
 IELTS/PTE practice links, and HTTP launches for all 139 sessions. It also creates
 one temporary student, saves a genuine mock result, opens its dashboard and
 private result/history, and signs out. It also checks owner/reviewer permissions,
-metadata-only full papers before access approval, and 21 loaded assets. Cleanup deletes only its exact fixture accounts
+metadata-only full papers before access approval, and 23 loaded assets. Cleanup deletes only its exact fixture accounts
 and their dependent results. It makes no paid AI calls and does not establish that
 a separately deployed Hostinger database or API key is configured correctly.
 
@@ -103,7 +103,7 @@ node tests/platform-browser-smoke.js
 
 The commerce suite passes 54 checks for one-free-mock reservation, concurrency/idempotency, payment bindings, signed webhook replay handling, paused checkout settlement, and refund/dispute revocation. Teacher tests pass 50 checks for role approvals, video revisions, elapsed/unique watch coverage, 90% positive net-profit allocation, carried losses and payout records. Content tests pass 108 checks for draft secrecy, explicit approved-teacher certification, duplicate rejection, frozen edits and paper dependency withdrawals. These three PHP suites use disposable databases.
 
-The payment HTTP suite passes 18 checks; the mock-access browser/API suite passes 21 checks; the teacher/owner platform suite passes 17 checks, including stale video-approval rejection. The platform suite temporarily changes only its own owner-managed policy fixture and restores it, so run it sequentially with other tests that edit that singleton policy.
+The payment HTTP suite passes 25 checks, including native form CSRF transport, forged-price rejection and frozen promotion code/price on checkout resume; the mock-access browser/API suite passes 21 checks; the teacher/owner platform suite passes 17 checks, including stale video-approval rejection. The platform suite temporarily changes only its own owner-managed policy fixture and restores it, so run it sequentially with other tests that edit that singleton policy.
 
 `php scripts/validate-content-drafts.php --all` validates 30,000 question slots and 3,000 assembled draft paper slots without publishing. The current templates contain 23,401 distinct normalised question structures, so repeated slots need substantive teacher editing or rejection. Structural validity does not establish 30,000 unique, correct, teacher-reviewed questions. Teacher-reviewed public inventory starts at zero and comes only from the human review ledger. The separate public generated library is explicitly unreviewed.
 
@@ -114,3 +114,25 @@ The payment HTTP suite passes 18 checks; the mock-access browser/API suite passe
 `node tests/generated-library-browser-smoke.js` passes 50 checks of the real public generated catalogues and runner on loopback only: four courses, skill/type filters, page boundaries, both themes and mobile/desktop layout, guest feedback, saved source labels and history, and the shared first-free-then-paid mock boundary. It creates and cleans only its own temporary student; no model, payment or teacher-publication calls occur.
 
 If an OpenAI credential is present in the development environment, run the no-key HTTP/browser AI suite with scoped `NISHA_OPENAI_API_KEY='' OPENAI_API_KEY='' node tests/ai-review-browser-smoke.js`. It starts its own local server and uses explicit provider fixtures. Do not call a real model merely to run these regression checks.
+
+## Admin, promotions, website settings and lessons
+
+`php tests/admin-accounts-integrity.php` passes 52 isolated checks, including
+private creation, current-password reauthentication, audit safety, session
+versions, suspension and last-active-owner protection. `node
+tests/admin-browser-smoke.js` passes 38 real local account/promotion checks,
+including profile/password/status/role changes invalidating earlier cookies,
+CSRF, promotion quotes, caps and student access denial.
+
+`php tests/promotions-integrity.php` passes 53 checks using explicit fake Stripe
+transports: percent/fixed calculations, immutable snapshots, pending checkout
+reuse, signed expiry/failure, refunds, definite rejection, unknown outcomes and
+genuine competing-student last-use concurrency. Only local reservation
+transactions retry deadlocks; provider requests keep their stable idempotency key.
+
+`php tests/site-settings-integrity.php` passes 26 isolated checks for public
+escaping/defaults, owner permissions, input validation and atomic audit writes.
+`node tests/coaching-filter-browser-smoke.js` passes 17 real local lesson-search
+checks covering keyword/course/skill filters, literal wildcard text, counts,
+reset/empty-library states, publication boundaries and responsive themes. No
+production lessons, administrators, payments or teacher reviews are created.

@@ -2,7 +2,9 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/teachers.php';
 $user = require_login();
+header('Cache-Control: private, no-store');
 $owner = nisha_is_admin($user);
+header('Cache-Control: private, no-store');
 if (!$owner) http_response_code(403);
 $error = ''; $success = ''; $unavailable = false;
 $data = ['profiles'=>[], 'videos'=>[], 'periods'=>[], 'allocations'=>[]];
@@ -14,16 +16,28 @@ if ($owner && $_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 if ($owner) try { $data = nisha_teacher_admin_data(); } catch (Throwable $exception) { $unavailable = true; }
 $settings = nisha_teacher_settings();
-$pageTitle = 'Owner controls'; $activePage = 'coaching'; $extraStyles = ['assets/css/teachers.css'];
+$siteStats = ['accounts' => null, 'submissions' => null, 'pending_teachers' => null, 'pending_lessons' => null];
+$recentOrders = [];
+if ($owner) {
+    foreach (['accounts' => 'SELECT COUNT(*) FROM users', 'submissions' => 'SELECT COUNT(*) FROM exam_runs', 'pending_teachers' => "SELECT COUNT(*) FROM teacher_profiles WHERE status='pending'", 'pending_lessons' => "SELECT COUNT(*) FROM coaching_videos WHERE status='pending'"] as $key => $query) {
+        try { $siteStats[$key] = (int) db()->query($query)->fetchColumn(); } catch (Throwable $exception) { /* Optional modules report unavailable counts. */ }
+    }
+    try { $recentOrders = db()->query('SELECT o.id,o.user_id,o.status,o.amount_minor,o.currency,o.created_at,u.name AS student_name FROM payment_orders o JOIN users u ON u.id=o.user_id ORDER BY o.created_at DESC,o.id DESC LIMIT 10')->fetchAll(); }
+    catch (Throwable $exception) { /* Billing setup remains accessible from the admin navigation. */ }
+}
+$pageTitle = 'Admin dashboard'; $activePage = 'admin'; $extraStyles = ['assets/css/teachers.css', 'assets/css/admin.css'];
 include __DIR__ . '/includes/header.php';
 ?>
-<main id="main" class="container teacher-page">
+<main id="main" class="container teacher-page admin-page">
 <?php if (!$owner): ?>
     <h1>Owner access is required.</h1><p>This account cannot open business controls.</p><a class="btn btn-primary" href="dashboard.php">Return to my dashboard</a>
 <?php else: ?>
-    <div class="teacher-intro"><div><p class="eyebrow">YOUR NISHA BUSINESS</p><h1>Owner controls.</h1><p>Approve teachers and lessons, verify monthly business profit and record completed teacher payouts.</p><nav class="teacher-nav" aria-label="Owner pages"><a class="btn btn-outline" href="billing-settings.php">Billing settings</a><a class="btn btn-outline" href="content-review.php">Content review</a><a class="btn btn-outline" href="teacher-portal.php">Teacher portal</a><a class="btn btn-outline" href="coaching.php">Coaching library</a></nav></div></div>
+    <div class="teacher-intro"><div><p class="eyebrow">YOUR NISHA BUSINESS</p><h1>Admin dashboard.</h1><p>Manage student accounts, pricing, promotions and website details. Review teachers and lessons, verify monthly business profit and record completed teacher payouts.</p><nav class="teacher-nav" aria-label="Admin pages"><a class="btn btn-outline" href="admin-accounts.php">Manage accounts</a><a class="btn btn-outline" href="billing-settings.php">Pricing &amp; payments</a><a class="btn btn-outline" href="admin-promotions.php">Discounts &amp; promotions</a><a class="btn btn-outline" href="admin-settings.php">Website settings</a><a class="btn btn-outline" href="content-review.php">Content review</a><a class="btn btn-outline" href="teacher-portal.php">Teacher portal</a><a class="btn btn-outline" href="coaching.php">Coaching library</a></nav></div></div>
+    <section class="admin-summary" aria-label="Website activity"><?php foreach (['accounts' => 'Registered accounts', 'submissions' => 'Saved practice & mock attempts', 'pending_teachers' => 'Teacher applications to review', 'pending_lessons' => 'Lessons awaiting review'] as $key => $label): ?><article><strong><?= $siteStats[$key] === null ? '—' : number_format((int) $siteStats[$key]) ?></strong><span><?= e($label) ?></span></article><?php endforeach; ?></section>
+    <div class="admin-shortcuts"><a class="admin-shortcut" href="admin-accounts.php"><h2>People &amp; permissions →</h2><p>Correct account details, reset passwords and manage access with a recorded reason.</p></a><a class="admin-shortcut" href="admin-promotions.php"><h2>Discounts &amp; offers →</h2><p>Set scheduled promotion codes, redemption limits and a public featured offer.</p></a><a class="admin-shortcut" href="admin-settings.php"><h2>Website details &amp; status →</h2><p>Update public website information and check setup readiness.</p></a></div>
     <?php if ($error): ?><div class="teacher-notice is-error" role="alert"><?= e($error) ?></div><?php endif; ?>
     <?php if ($success): ?><div class="teacher-notice" role="status"><?= e($success) ?></div><?php endif; ?>
+    <?php if ($recentOrders): ?><section class="teacher-panel" id="recent-orders"><h2>Recent payment orders</h2><p>Orders show the agreed checkout price. A pending order does not grant paid access; confirmed refunds and disputes may revoke access.</p><div class="teacher-table-wrap"><table class="teacher-table"><caption>Ten most recent NISHA payment orders</caption><thead><tr><th>Student</th><th>Agreed price</th><th>Status</th><th>Created (UTC)</th></tr></thead><tbody><?php foreach ($recentOrders as $order): ?><tr><td><a class="text-link" href="admin-accounts.php?id=<?= (int) $order['user_id'] ?>#account-details"><?= e($order['student_name']) ?></a><br><small>Account <?= (int) $order['user_id'] ?></small></td><td><?= e(nisha_commerce_money((int) $order['amount_minor'], $order['currency'])) ?></td><td><?= e(ucfirst($order['status'])) ?></td><td><?= e($order['created_at']) ?></td></tr><?php endforeach; ?></tbody></table></div></section><?php endif; ?>
     <?php if ($unavailable): ?><div class="teacher-notice" role="status">Owner controls need the teacher database tables. Import database/migrations/005_teachers.sql into the existing NISHA database, then return here. Existing accounts and results must be preserved.</div><?php else: ?>
     <section class="teacher-panel" id="teacher-policy"><h2>Teacher reward policy</h2><p><strong>90% of verified profit after expenses and carried losses</strong> funds the monthly teacher pool. Each teacher receives a share in proportion to qualified student views. Enabling this policy does not transfer money.</p>
         <form method="post" class="teacher-form"><?= csrf_field() ?><input type="hidden" name="action" value="save_policy">

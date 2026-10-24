@@ -23,7 +23,7 @@ checks.
    its database and OpenAI settings:
 
    ```php
-   'site_url' => 'https://YOUR_WEBSITE_HOST',
+   'site_url' => 'https://nishaglobal.com',
    'stripe_secret_key' => 'YOUR_STRIPE_SECRET_KEY',
    'stripe_webhook_secret' => 'YOUR_ENDPOINT_SIGNING_SECRET',
    'payment_amount_minor' => 2900,
@@ -41,8 +41,9 @@ checks.
    price settings. The signing secret must be available to PHP locally for HMAC
    verification; a network-only credential placeholder cannot replace it.
 4. Configure Stripe's webhook destination as
-   `https://YOUR_WEBSITE_HOST/api/stripe-webhook.php`. Subscribe to
+   `https://nishaglobal.com/api/stripe-webhook.php`. Subscribe to
    `checkout.session.completed`, `checkout.session.async_payment_succeeded`,
+   `checkout.session.async_payment_failed`, `checkout.session.expired`,
    `charge.refunded`, `charge.dispute.created` and
    `charge.dispute.funds_withdrawn`. Use the signing secret for that endpoint.
 5. Enable verified outbound HTTPS requests to `api.stripe.com` on the PHP host.
@@ -61,6 +62,35 @@ checkout** does not stop valid signed events for purchases or refunds already in
 flight. Changes affect fresh orders; an existing checkout retains its original
 displayed price, currency and duration until its 24-hour expiry. The pricing
 page shows that pending agreement before the customer resumes it.
+
+## Promotions
+
+Import migration 007 or the full schema. Administrators can create percent or
+fixed discounts at `admin-promotions.php`, with UTC validity windows, matching
+currency, overall usage caps and per-student caps. Featured active offers appear
+on the homepage and pricing page. The student can preview a code without
+creating an order or spending a promotion use. Checkout recalculates eligibility
+under locks; the browser never supplies the charge amount. Discounts must leave
+at least 1.00 in the selected currency, and cannot be combined.
+
+Each order stores immutable base price, discount, code, actual charge and access
+period. Changing or disabling a promotion affects fresh orders; an existing
+checkout retains its agreement. Resuming a pending order with a different code
+is rejected rather than silently changing its amount. Payment revenue is the
+actual discounted charge in `payment_orders`, not the original list price.
+
+Reserved and redeemed checkouts both count towards usage caps. Reservations are
+released only by a correctly bound signed expired/failed checkout event, or a
+definitive provider rejection before a session was created. Network failures,
+unknown outcomes and ambiguous retries retain the reservation and reuse the
+same immutable order/idempotency key. A time passing locally cannot prove a
+session did not settle. Reconcile uncertain sessions in Stripe; do not delete
+reservations to make a limited code available. Refunds retain the redemption
+count to prevent repeated code recycling.
+
+See [production launch](launch-nishaglobal.md) for the exact domain, private
+configuration and live-mode activation steps. Live keys and signed delivery
+must be configured on Hostinger before actual payments can be accepted.
 
 ## Free mock and paid access rules
 

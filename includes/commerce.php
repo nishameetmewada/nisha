@@ -223,31 +223,77 @@ function nisha_stripe_request(string $path, array $fields, string $idempotency, 
         } else throw new NishaCommerceException('The site owner needs to enable verified HTTPS requests for checkout.','checkout_transport');
         $reply=['status'=>$status,'body'=>$raw];
     }
+    if(is_int($reply['status']??null)&&$reply['status']===400&&is_string($reply['body']??null)&&strlen($reply['body'])<=1048576){
+        $rejection=json_decode($reply['body'],true);
+        // A validation rejection means this request created no session. Keep
+        // uncertain/authentication/idempotency failures reserved: an earlier
+        // request may have succeeded even when its response was lost.
+        if(is_array($rejection)&&($rejection['error']['type']??null)==='invalid_request_error'&&!str_contains((string)($rejection['error']['code']??''),'idempotency')&&!str_contains((string)($rejection['error']['param']??''),'idempotency'))throw new NishaCommerceException('Checkout was rejected before a payment session was created. No access was granted; please retry or contact the owner.','checkout_rejected');
+    }
     if(!is_int($reply['status']??null)||!is_string($reply['body']??null)||strlen($reply['body'])>1048576||$reply['status']<200||$reply['status']>=300)throw new NishaCommerceException('The payment provider could not create checkout. No access was granted.','checkout_provider');
     try{$decoded=json_decode($reply['body'],true,32,JSON_THROW_ON_ERROR);}catch(JsonException$e){throw new NishaCommerceException('Checkout returned an unreadable response. Please retry.','checkout_invalid');}
     if(!is_array($decoded))throw new NishaCommerceException('Checkout returned an invalid response. Please retry.','checkout_invalid');
     return$decoded;
 }
 
-function nisha_commerce_checkout(PDO $pdo, int $userId, ?callable $transport=null): array
+function nisha_commerce_checkout(PDO $pdo, int $userId, ?callable $transport=null, string $promotionCode=''): array
 {
+    require_once __DIR__ . '/promotions.php';
+    $promotionCode=nisha_promotions_code($promotionCode);
     $settings=nisha_commerce_settings();
     if(!$settings['enabled'])throw new NishaCommerceException('Payments are not enabled yet. Free practice and your first full mock are available.','payments_not_configured');
+    // Only the local reservation transaction is retried. Provider requests
+    // remain outside this loop and keep their immutable idempotency key.
+    for($reservationAttempt=0;;++$reservationAttempt){
     $pdo->beginTransaction();
     try {
         nisha_commerce_lock_user($pdo, $userId);
         if (nisha_commerce_has_paid($pdo, $userId)) throw new NishaCommerceException('Your pass is already active. You can purchase another after it expires.', 'pass_already_active', 409);
-        $q=$pdo->prepare("SELECT * FROM payment_orders WHERE user_id=? AND status='pending' AND created_at>UTC_TIMESTAMP()-INTERVAL 24 HOUR ORDER BY created_at DESC LIMIT 1 FOR UPDATE");
+        // The user row already serialises this student's checkout creation.
+        // Locking an empty secondary-index range would also lock gaps shared
+        // with other students and can deadlock their promotion reservations.
+        $q=$pdo->prepare("SELECT * FROM payment_orders WHERE user_id=? AND status='pending' AND created_at>UTC_TIMESTAMP()-INTERVAL 24 HOUR ORDER BY created_at DESC LIMIT 1");
         $q->execute([$userId]);$order=$q->fetch();
-        if(!$order){$id=bin2hex(random_bytes(16));$q=$pdo->prepare('INSERT INTO payment_orders (id,user_id,amount_minor,currency,access_days) VALUES (?,?,?,?,?)');$q->execute([$id,$userId,$settings['amount_minor'],$settings['currency'],$settings['access_days']]);$q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=?');$q->execute([$id]);$order=$q->fetch();}
+        if($order){
+            $q=$pdo->prepare("SELECT * FROM payment_orders WHERE id=? AND status='pending' FOR UPDATE");$q->execute([$order['id']]);$order=$q->fetch();
+        }
+        if($order){
+            $snapshot=nisha_promotions_order_snapshot($pdo,$order['id'],true);
+            if($snapshot!==null&&$snapshot['status']==='released')$order=null;
+            elseif(($snapshot['code']??'')!==$promotionCode)throw new NishaCommerceException('A checkout with a different promotion is already pending. Resume it using its original code, or wait for its confirmed expiry before changing codes.','checkout_promotion_conflict',409);
+        }
+        if(!$order){
+            // The user lock serialises this student's requests; the promotion
+            // lock in quote() serialises global capacity across students.
+            $quote=nisha_promotions_quote($pdo,$userId,$promotionCode,$settings,true);
+            $id=bin2hex(random_bytes(16));$q=$pdo->prepare('INSERT INTO payment_orders (id,user_id,amount_minor,currency,access_days) VALUES (?,?,?,?,?)');$q->execute([$id,$userId,$quote['amount_minor'],$quote['currency'],$quote['access_days']]);$q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=?');$q->execute([$id]);$order=$q->fetch();
+            nisha_promotions_snapshot($pdo,$order,$quote);
+        }
         $pdo->commit();
-    } catch (Throwable $exception) { if ($pdo->inTransaction()) $pdo->rollBack(); throw $exception; }
+        break;
+    } catch (Throwable $exception) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        if($exception instanceof PDOException&&in_array((int)($exception->errorInfo[1]??0),[1020,1213],true)&&$reservationAttempt<2){usleep(10000);continue;}
+        throw $exception;
+    }
+    }
     if($order['checkout_id']&&$order['checkout_url'])return['order_id'=>$order['id'],'url'=>$order['checkout_url']];
     $fields=['mode'=>'payment','payment_method_types'=>['card'],'expires_at'=>strtotime($order['created_at'].' UTC')+86400,'line_items'=>[['price_data'=>['currency'=>$order['currency'],'unit_amount'=>(int)$order['amount_minor'],'product_data'=>['name'=>'NISHA full mock access — '.$order['access_days'].' days']],'quantity'=>1]],
         'client_reference_id'=>$order['id'],'metadata'=>['order_id'=>$order['id'],'user_id'=>(string)$userId],
         'payment_intent_data'=>['metadata'=>['order_id'=>$order['id'],'user_id'=>(string)$userId]],
         'success_url'=>$settings['site_url'].'/pricing.php?checkout=success','cancel_url'=>$settings['site_url'].'/pricing.php?checkout=cancelled'];
-    $session=nisha_stripe_request('/v1/checkout/sessions',$fields,'nisha-checkout-'.$order['id'],$transport);
+    try{$session=nisha_stripe_request('/v1/checkout/sessions',$fields,'nisha-checkout-'.$order['id'],$transport);}
+    catch(NishaCommerceException$exception){
+        if($exception->errorCode==='checkout_rejected'){
+            $pdo->beginTransaction();
+            try{
+                $q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=? FOR UPDATE');$q->execute([$order['id']]);$rejected=$q->fetch();
+                if($rejected&&!$rejected['checkout_id'])nisha_promotions_release($pdo,$rejected,'provider_rejected');
+                $pdo->commit();
+            }catch(Throwable$cleanup){if($pdo->inTransaction())$pdo->rollBack();throw$cleanup;}
+        }
+        throw$exception;
+    }
     $url=$session['url']??'';$parts=is_string($url)?parse_url($url):false;
     if(!is_string($session['id']??null)||!preg_match('/\Acs_(?:test_|live_)?[A-Za-z0-9_]+\z/D',$session['id'])||!is_array($parts)||($parts['scheme']??'')!=='https'||($parts['host']??'')!=='checkout.stripe.com'||isset($parts['user'])||isset($parts['pass'])||(isset($parts['port'])&&$parts['port']!==443)||preg_match('/[\r\n\x00]/',$url))throw new NishaCommerceException('Checkout could not be safely opened. No access was granted.','checkout_invalid');
     $q=$pdo->prepare('UPDATE payment_orders SET checkout_id=?,checkout_url=? WHERE id=? AND user_id=? AND checkout_id IS NULL');$q->execute([$session['id'],$url,$order['id'],$userId]);
@@ -270,6 +316,7 @@ function nisha_stripe_verify_event(string $raw, string $signature, string $secre
 /** Only signed, bound, settled Stripe events can grant or revoke access. */
 function nisha_commerce_apply_event(PDO $pdo, array $event): array
 {
+    require_once __DIR__ . '/promotions.php';
     $settings=nisha_commerce_settings();
     if(!$settings['provider_ready'])throw new NishaCommerceException('Payment processing is not configured.','payments_not_configured');
     if(!is_bool($event['livemode']??null)||$event['livemode']!==$settings['live'])throw new NishaCommerceException('The payment event is for a different mode.','webhook_mode',400);
@@ -280,18 +327,31 @@ function nisha_commerce_apply_event(PDO $pdo, array $event): array
         if(in_array($type,['checkout.session.completed','checkout.session.async_payment_succeeded'],true)){
             $id=$object['metadata']['order_id']??null;
             if(!is_string($id)||!preg_match('/\A[a-f0-9]{32}\z/D',$id))throw new NishaCommerceException('Payment order binding is invalid.','webhook_binding',400);
+            // Match checkout's user -> order -> promotion snapshot lock order.
+            // The current order is read and bound again after acquiring locks.
+            $q=$pdo->prepare('SELECT user_id FROM payment_orders WHERE id=?');$q->execute([$id]);$orderUser=$q->fetchColumn();
+            if($orderUser===false)throw new NishaCommerceException('Payment order was not found.','webhook_order',400);
+            nisha_commerce_lock_user($pdo,(int)$orderUser);
             $q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=? FOR UPDATE');$q->execute([$id]);$order=$q->fetch();
             if(!$order)throw new NishaCommerceException('Payment order was not found.','webhook_order',400);
             if(($object['mode']??null)!=='payment'||($object['status']??null)!=='complete'||($object['payment_status']??null)!=='paid'||($object['id']??null)!==$order['checkout_id']||($object['client_reference_id']??null)!==$order['id']
                 ||($object['metadata']['user_id']??null)!==(string)$order['user_id']||!is_int($object['amount_total']??null)||$object['amount_total']!==(int)$order['amount_minor']||($object['currency']??null)!==$order['currency']||!is_string($object['payment_intent']??null)||!preg_match('/\Api_[A-Za-z0-9_]{1,240}\z/D',$object['payment_intent']))throw new NishaCommerceException('Payment details do not match this order.','webhook_binding',400);
+            nisha_promotions_redeem($pdo,$order);
             if($order['status']==='pending'){
-                nisha_commerce_lock_user($pdo,(int)$order['user_id']);
                 // Each purchase grants only its own advertised duration. It
                 // cannot inherit time from another purchase later refunded.
                 $start=gmdate('Y-m-d H:i:s');$end=gmdate('Y-m-d H:i:s',time()+(int)$order['access_days']*86400);
                 $q=$pdo->prepare("UPDATE payment_orders SET status='paid',payment_intent=?,paid_at=UTC_TIMESTAMP() WHERE id=?");$q->execute([$object['payment_intent'],$id]);
                 $q=$pdo->prepare('INSERT INTO student_entitlements (user_id,order_id,starts_at,expires_at) VALUES (?,?,?,?)');$q->execute([$order['user_id'],$id,$start,$end]);
             } elseif($order['payment_intent']!==$object['payment_intent'])throw new NishaCommerceException('Payment reference conflict.','webhook_binding',400);
+        } elseif(in_array($type,['checkout.session.expired','checkout.session.async_payment_failed'],true)){
+            $id=$object['metadata']['order_id']??null;
+            if(!is_string($id)||!preg_match('/\A[a-f0-9]{32}\z/D',$id))throw new NishaCommerceException('Payment order binding is invalid.','webhook_binding',400);
+            $q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=? FOR UPDATE');$q->execute([$id]);$order=$q->fetch();
+            if(!$order)throw new NishaCommerceException('Payment order was not found.','webhook_order',400);
+            if(($object['id']??null)!==$order['checkout_id']||($object['client_reference_id']??null)!==$order['id']||($object['metadata']['user_id']??null)!==(string)$order['user_id']||($object['mode']??null)!=='payment'
+                ||($type==='checkout.session.expired'&&($object['status']??null)!=='expired'))throw new NishaCommerceException('Checkout expiry does not match this order.','webhook_binding',400);
+            nisha_promotions_release($pdo,$order,$type==='checkout.session.expired'?'expired':'async_failed');
         } elseif(in_array($type,['charge.refunded','charge.dispute.created','charge.dispute.funds_withdrawn'],true)){
             $intent=$object['payment_intent']??null;
             if(!is_string($intent)||!preg_match('/\Api_[A-Za-z0-9_]{1,240}\z/D',$intent))throw new NishaCommerceException('Refund payment reference is invalid.','webhook_binding',400);

@@ -38,8 +38,11 @@ async function webhook(event, signature) {
     fixture = localPhp(`
 $q=db()->prepare('INSERT INTO users(name,email,password_hash) VALUES (?,?,?)');$q->execute(['Commerce HTTP fixture',$input['email'],password_hash($input['password'],PASSWORD_DEFAULT)]);$user=(int)db()->lastInsertId();
 $id=bin2hex(random_bytes(16));$checkout='cs_test_http_'.$id;
-$q=db()->prepare("INSERT INTO payment_orders(id,user_id,amount_minor,currency,access_days,checkout_id) VALUES (?,?,2900,'aud',30,?)");$q->execute([$id,$user,$checkout]);
-echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout]);`, { email, password });
+$code='HTTP'.strtoupper(bin2hex(random_bytes(8)));
+$q=db()->prepare("INSERT INTO commerce_promotions(code,public_label,discount_type,discount_value,currency,enabled,updated_by) VALUES (?,'HTTP fixture discount','percent',25,'aud',1,?)");$q->execute([$code,$user]);$promotion=(int)db()->lastInsertId();
+$q=db()->prepare("INSERT INTO payment_orders(id,user_id,amount_minor,currency,access_days,checkout_id) VALUES (?,?,2175,'aud',30,?)");$q->execute([$id,$user,$checkout]);
+require_once 'includes/promotions.php';nisha_promotions_snapshot(db(),['id'=>$id,'user_id'=>$user],['promotion_id'=>$promotion,'code'=>$code,'public_label'=>'HTTP fixture discount','base_amount_minor'=>2900,'discount_minor'=>725,'amount_minor'=>2175,'currency'=>'aud','access_days'=>30]);
+echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout,'promotion_id'=>$promotion,'promotion_code'=>$code]);`, { email, password });
     const probe = net.createServer();
     await new Promise(resolve => probe.listen(0, '127.0.0.1', resolve));
     const port = probe.address().port; await new Promise(resolve => probe.close(resolve));
@@ -65,7 +68,7 @@ echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout]);`,
     const event = { id: `evt_http_${fixture.order_id}`, type: 'checkout.session.completed', livemode: false, data: { object: {
         mode: 'payment', status: 'complete', payment_status: 'paid', id: fixture.checkout_id,
         client_reference_id: fixture.order_id, metadata: { order_id: fixture.order_id, user_id: String(fixture.user_id) },
-        amount_total: 2900, currency: 'aud', payment_intent: `pi_http_${fixture.order_id}` } } };
+        amount_total: 2175, currency: 'aud', payment_intent: `pi_http_${fixture.order_id}` } } };
     eventIds.push(event.id);
     const raw = JSON.stringify(event);
     reply = await webhook(raw + ' ', signed(raw));
@@ -81,12 +84,33 @@ echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout]);`,
     result = await request('/login.php', { method: 'POST', body: new URLSearchParams({ email, password, csrf_token: csrf }) }, true);
     ok(result.status === 303, 'The disposable student signs in through the real login form.');
     result = await request('/pricing.php', {}, true); html = await result.text();
+    const pendingCode = html.match(/id="promotion-code"[^>]*value="([^"]*)"/);
+    ok(pendingCode?.[1] === fixture.promotion_code && html.includes('AUD 21.75') && html.includes('Original promotion:'), 'Pending discounted checkout reloads with its original amount and promotion code prefilled.');
+    localPhp(`$q=db()->prepare('UPDATE commerce_promotions SET enabled=0 WHERE id=? AND code=?');$q->execute([$input['promotion_id'],$input['promotion_code']]);echo json_encode(['updated'=>true]);`, fixture);
+    result = await request('/pricing.php', {}, true); html = await result.text();
+    ok(html.match(/id="promotion-code"[^>]*value="([^"]*)"/)?.[1] === fixture.promotion_code && html.includes('AUD 21.75') && !html.includes(secret) && !html.includes('sk_test_nisha_http_fixture') && !html.includes('$2y$'), 'An issued checkout keeps its immutable promotion after it is disabled, without exposing private connection data.');
+    // A separate fixture phase checks the released state; restore this exact
+    // artificial reservation before exercising its independent settlement flow.
+    localPhp(`$q=db()->prepare("UPDATE commerce_promotion_orders SET status='released' WHERE order_id=? AND user_id=?");$q->execute([$input['order_id'],$input['user_id']]);echo json_encode(['updated'=>true]);`, fixture);
+    result = await request('/pricing.php', {}, true); html = await result.text();
+    ok(!html.includes('Your checkout in progress keeps its original price:') && html.match(/id="promotion-code"[^>]*value="([^"]*)"/)?.[1] === '', 'A released checkout is not advertised or prefilled as resumable.');
+    localPhp(`$q=db()->prepare("UPDATE commerce_promotion_orders SET status='reserved' WHERE order_id=? AND user_id=?");$q->execute([$input['order_id'],$input['user_id']]);echo json_encode(['updated'=>true]);`, fixture);
     csrf = html.match(/name="csrf-token" content="([a-f0-9]{64})"/)[1];
     result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json' } }, true);
     ok(result.status === 403, 'Authenticated checkout still requires CSRF protection.');
     result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-Token': csrf } }, true);
     const disabled = await result.json();
     ok(result.status === 503 && disabled.code === 'payments_not_configured', 'Paused checkout returns before any provider connection.');
+    result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json' }, body: new URLSearchParams({ csrf_token: csrf, promotion_code: '' }) }, true);
+    const nativeForm = await result.json();
+    ok(result.status === 503 && nativeForm.code === 'payments_not_configured', 'Native checkout accepts its verified hidden CSRF field without treating it as a client price.');
+    result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json' }, body: new URLSearchParams({ csrf_token: csrf, promotion_code: 'INVALID!CODE' }) }, true);
+    const invalidPromotion = await result.json();
+    ok(result.status === 422 && invalidPromotion.code === 'promotion_invalid', 'Native form promotion validation runs after CSRF and before a provider connection.');
+    result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json' }, body: new URLSearchParams({ csrf_token: csrf, promotion_code: '', amount_minor: '1' }) }, true);
+    ok(result.status === 422 && !(await result.json()).checkout_url, 'Native checkout still rejects client-supplied amounts.');
+    result = await request('/api/checkout.php', { method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'X-CSRF-Token': csrf }, body: JSON.stringify({ csrf_token: csrf, promotion_code: '' }) }, true);
+    ok(result.status === 422 && !(await result.json()).checkout_url, 'JSON checkout keeps its promotion-code-only request shape.');
     reply = await webhook(event);
     ok(reply.status === 200 && reply.data.received === true, 'A correctly bound signed HTTP event activates access while new checkout is paused.');
     reply = await webhook(event);
@@ -97,8 +121,8 @@ echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout]);`,
     result = await request('/pricing.php', {}, true); html = await result.text();
     ok(html.includes('Your pass is active until') && !html.includes(secret) && !html.includes('sk_test_nisha_http_fixture'), 'The real pricing page reflects paid access without exposing connection secrets.');
     const refund = { id: `evt_http_refund_${fixture.order_id}`, type: 'charge.refunded', livemode: false, data: { object: {
-        payment_intent: event.data.object.payment_intent, currency: 'aud', amount_refunded: 2900,
-        refunds: { data: [{ id: `re_http_${fixture.order_id}`, status: 'succeeded', amount: 2900, currency: 'aud' }] } } } };
+        payment_intent: event.data.object.payment_intent, currency: 'aud', amount_refunded: 2175,
+        refunds: { data: [{ id: `re_http_${fixture.order_id}`, status: 'succeeded', amount: 2175, currency: 'aud' }] } } } };
     eventIds.push(refund.id);
     reply = await webhook(refund);
     ok(reply.status === 200, 'A signed HTTP refund is processed while new checkout remains paused.');
@@ -112,5 +136,5 @@ echo json_encode(['user_id'=>$user,'order_id'=>$id,'checkout_id'=>$checkout]);`,
     if (server) { server.kill(); await new Promise(resolve => { server.once('exit', resolve); setTimeout(resolve, 1000); }); }
     if (fixture) localPhp(`
 foreach($input['events'] as $id){$q=db()->prepare('DELETE FROM payment_events WHERE event_id=?');$q->execute([$id]);}
-$q=db()->prepare('DELETE FROM users WHERE id=? AND email=?');$q->execute([$input['user_id'],$input['email']]);echo json_encode(['cleaned'=>true]);`, { user_id: fixture.user_id, email, events: eventIds });
+$q=db()->prepare('DELETE FROM users WHERE id=? AND email=?');$q->execute([$input['user_id'],$input['email']]);$q=db()->prepare('DELETE FROM commerce_promotions WHERE id=? AND code=?');$q->execute([$input['promotion_id'],$input['promotion_code']]);echo json_encode(['cleaned'=>true]);`, { user_id: fixture.user_id, email, events: eventIds, promotion_id: fixture.promotion_id, promotion_code: fixture.promotion_code });
 });

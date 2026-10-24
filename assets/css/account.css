@@ -103,3 +103,5 @@
 @media(prefers-reduced-motion:reduce){.form-field input,.form-field select{transition:none}}
 /* Keep the account fields in the first screen on phones and narrow tablets. */
 @media(max-width:680px){.auth-card{grid-row:1}.auth-story{grid-row:2}.auth-shell{padding-top:24px}.auth-card{padding:25px 20px}}
+
+.pricing-checkout{display:grid;gap:.75rem;margin-top:1.25rem;min-width:0}.pricing-checkout label{font-weight:700}.pricing-promotion-row{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;min-width:0}.pricing-promotion-row input{flex:1 1 150px;width:100%;min-width:0;border:1px solid var(--line);border-radius:12px;padding:.85rem;font:inherit;font-size:1rem;background:var(--surface);color:var(--ink)}.pricing-checkout .btn{max-width:100%;white-space:normal}.promotion-box{margin-bottom:1.5rem;border:2px solid var(--green)}.pricing-checkout p{overflow-wrap:anywhere}

@@ -64,6 +64,9 @@ $platformGroups = [
     'Mock access and payments' => ['commerce_settings', 'commerce_settings_audit', 'commerce_trials', 'mock_access_grants', 'mock_paid_sources', 'payment_orders', 'student_entitlements', 'payment_events', 'commerce_refunds'],
     'Teacher moderation and reward ledgers' => ['user_roles', 'teacher_profiles', 'coaching_videos', 'coaching_watch_sessions', 'coaching_watch_presence', 'coaching_qualified_views', 'teacher_policy_settings', 'teacher_reward_locks', 'teacher_profit_periods', 'teacher_reward_allocations'],
     'Teacher-reviewed content publications' => ['content_review_versions', 'content_publications', 'content_mock_dependencies'],
+    'Discounts and promotions' => ['commerce_promotions', 'commerce_promotion_orders', 'commerce_promotions_audit'],
+    'Administrator account controls' => ['account_security', 'admin_account_locks', 'admin_account_audit'],
+    'Public website settings' => ['site_settings', 'site_settings_audit'],
 ];
 foreach ($platformGroups as $label => $tables) {
     try {
@@ -71,7 +74,7 @@ foreach ($platformGroups as $label => $tables) {
         echo 'PASS: ' . $label . ".\n";
     } catch (Throwable $exception) {
         $requiredReady = false;
-        echo 'SETUP REQUIRED: ' . $label . ". Import the new database/schema.sql or the matching 004/005/006 migrations; preserve existing data.\n";
+        echo 'SETUP REQUIRED: ' . $label . ". Import the new database/schema.sql or the matching 004–009 migrations; preserve existing data.\n";
     }
 }
 

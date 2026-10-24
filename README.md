@@ -2,6 +2,8 @@
 
 A responsive PHP and MySQL study website for students preparing for IELTS and PTE. There is no Composer, npm, or frontend build step. Upload the PHP files and assets to a PHP hosting account, import the database, and add your database settings.
 
+The production domain is **https://nishaglobal.com**. See [production launch](docs/launch-nishaglobal.md) for deployment, private administrator creation and Stripe activation. Code readiness does not establish live hosting or merchant setup.
+
 ## Included
 
 - A responsive, original NISHA landing page and mobile navigation.
@@ -19,6 +21,8 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - A MySQL schema for users, short practice history, and complete reports.
 - One reserved, resumable free full mock per student account; further full mocks require an active one-time access pass. The editable launch plan is **AUD 29 for 30 days**, with no automatic renewal.
 - Hosted Stripe Checkout, signed payment webhooks, payment/access history and an owner billing-settings page. Checkout stays disabled until private provider setup is complete.
+- Admin controls for pricing, percentage/fixed promotions, account editing, password resets, suspension, roles and audit history. Security changes revoke existing sessions.
+- Editable homepage tagline, public announcement and support email. Coaching lessons support keyword, course and skill filters with accurate result counts.
 - Teacher applications, moderated coaching videos, paid-student viewing and a private teacher portal.
 - An owner-approved teacher reward ledger: **90% of positive verified net profit after business operating expenses and carried losses**, apportioned by qualified student video views. Actual payouts are recorded manually after the owner transfers money.
 - A separate public generated library with **30,000 question variants and 3,000 assembled mock variants** across all four courses, with course, skill and task-type filters. Generated content is labelled as not teacher-reviewed; source scenarios and question structures repeat. It is not 30,000 independent questions or 3,000 unseen papers.
@@ -46,7 +50,7 @@ A deployment ZIP is provided separately with the project files at its root. It i
 
 For an existing website, preserve **`public_html/config/config.php`** when uploading an update. Import `database/schema.sql` into its configured database if any tables are missing; the import preserves existing tables and records. Uploading the ZIP alone does not connect the website to MySQL or activate OpenAI. If registration shows “temporarily unavailable”, follow the [database setup guide](docs/database-setup.md). An owner with SSH access can run `php check-setup.php` privately for a credential-free report; browser access to that script returns 404.
 
-For this platform upgrade, import **004_commerce.sql**, **005_teachers.sql** and **006_content_reviews.sql** in order, or re-import the complete additive `database/schema.sql`. Register your owner account, then grant that existing account the owner role using the private CLI tool documented in [teacher and owner setup](docs/teacher-rewards.md). Ordinary registration never creates an administrator. Complete [Stripe setup](docs/commerce.md), configure the teacher video hosts and reward policy in the owner dashboard, and assign approved teachers to the [content review queue](docs/question-bank.md). Preserve database/API credentials when adding settings from the updated example.
+For this platform upgrade, import migrations **004 through 009** in order, or re-import the complete additive `database/schema.sql`. Sites already on the earlier commerce/teacher platform need only **007_promotions.sql**, **008_admin_accounts.sql** and **009_site_settings.sql**. Follow [administrator setup](docs/admin.md) to create a private owner login or promote a verified existing numeric account ID. Ordinary registration never creates an administrator. Complete [Stripe setup](docs/commerce.md), configure teacher video hosts and rewards, and assign approved teachers to the [content review queue](docs/question-bank.md). Preserve database/API credentials when adding settings from the updated example.
 
 The 30,000/3,000 expansion needs real teacher review and sufficient distinct content. Generated drafts and assembled mock drafts are private review material, not teacher certification. A validation script cannot publish or certify them. The original four starter mocks remain separate and are not represented as teacher-reviewed papers. Live charging requires your Stripe account and webhook; no real charge or automatic teacher bank transfer is made by local tests.
 

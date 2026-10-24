@@ -3,6 +3,8 @@ require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/generated-library.php';
 require_once __DIR__ . '/includes/generated-public-library.php';
 require_once __DIR__ . '/includes/commerce.php';
+require_once __DIR__ . '/includes/promotions.php';
+$featuredPromotion = nisha_promotions_featured();
 require_once __DIR__ . '/includes/teachers.php';
 $reviewedBank = nisha_generated_stats();
 $generatedBank = nisha_generated_public_stats();
@@ -18,7 +20,7 @@ include __DIR__ . '/includes/header.php';
 <main id="main">
     <section class="hero container" aria-labelledby="hero-title">
         <div class="hero-copy">
-            <div class="eyebrow"><span class="status-dot"></span> A LITTLE PRACTICE. A WORLD OF POSSIBILITIES.</div>
+            <div class="eyebrow"><span class="status-dot"></span> <?= e($publicSiteDetails['home_tagline']) ?></div>
             <h1 id="hero-title">Big dreams.<br>Better preparation.<br><span>Your next chapter.</span><svg class="headline-underline" viewBox="0 0 395 15" fill="none" aria-hidden="true"><path d="M3 10C110 1 256 0 391 7" stroke="#b6c98a" stroke-width="7" stroke-linecap="round"/></svg></h1>
             <p class="hero-description">Your journey to studying, working, or living abroad starts here. Build your IELTS &amp; PTE confidence with focused practice and full-length mock exams.</p>
             <div class="hero-actions"><a href="exams.php" class="btn btn-primary">Try your free mock <?= icon('arrow') ?></a><a href="pricing.php" class="hero-secondary">See access plans <?= icon('arrow', '', 17) ?></a></div>
@@ -35,6 +37,7 @@ include __DIR__ . '/includes/header.php';
         </div>
     </section>
     <section class="belief-strip" aria-label="Our approach"><div class="container"><span>Big goals. <strong>Small, steady steps.</strong></span><div><?= icon('globe') ?> IELTS &amp; PTE, together</div><div><?= icon('clock') ?> Your time. Your pace.</div><div><?= icon('heart') ?> A little support goes a long way</div></div></section>
+    <?php if ($featuredPromotion): ?><aside class="container platform-promotion" aria-labelledby="featured-promotion-title"><div><p class="eyebrow">CURRENT PROMOTION</p><h2 id="featured-promotion-title"><?= e($featuredPromotion['public_label']) ?></h2><p>Use code <strong><?= e($featuredPromotion['code']) ?></strong> for an eligible access pass at <?= e(nisha_commerce_money((int)$featuredPromotion['amount_minor'],$featuredPromotion['currency'])) ?>. Availability and account limits apply.</p></div><a class="btn btn-primary" href="pricing.php">View offer →</a></aside><?php endif; ?>
     <section class="section container platform-growth" aria-labelledby="bank-growth-heading">
         <div class="section-heading"><div><p class="eyebrow">MORE PRACTICE. MORE POSSIBILITIES.</p><h2 id="bank-growth-heading">A bigger library for your next step.</h2><p>Explore generated practice for IELTS Academic, General Training, PTE Academic and PTE Core. Our teacher-reviewed collection remains a separate choice.</p></div><a class="text-link" href="generated-practice.php">Explore generated questions <?= icon('arrow', '', 19) ?></a></div>
         <div class="platform-stat-grid">
