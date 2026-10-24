@@ -1,9 +1,11 @@
 <?php
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/generated-library.php';
+require_once __DIR__ . '/includes/generated-public-library.php';
 require_once __DIR__ . '/includes/commerce.php';
 require_once __DIR__ . '/includes/teachers.php';
 $reviewedBank = nisha_generated_stats();
+$generatedBank = nisha_generated_public_stats();
 $launchPlan = nisha_commerce_plan();
 $launchPrice = nisha_commerce_money((int) $launchPlan['amount_minor'], (string) $launchPlan['currency']);
 $rewardShare = nisha_teacher_settings()['share_percent'];
@@ -34,14 +36,14 @@ include __DIR__ . '/includes/header.php';
     </section>
     <section class="belief-strip" aria-label="Our approach"><div class="container"><span>Big goals. <strong>Small, steady steps.</strong></span><div><?= icon('globe') ?> IELTS &amp; PTE, together</div><div><?= icon('clock') ?> Your time. Your pace.</div><div><?= icon('heart') ?> A little support goes a long way</div></div></section>
     <section class="section container platform-growth" aria-labelledby="bank-growth-heading">
-        <div class="section-heading"><div><p class="eyebrow">A GROWING LIBRARY. A TEACHER’S EYE.</p><h2 id="bank-growth-heading">More practice, with review before release.</h2><p>We are building a teacher-reviewed collection for all four IELTS and PTE courses.</p></div><a class="text-link" href="question-bank.php">Browse reviewed questions <?= icon('arrow', '', 19) ?></a></div>
+        <div class="section-heading"><div><p class="eyebrow">MORE PRACTICE. MORE POSSIBILITIES.</p><h2 id="bank-growth-heading">A bigger library for your next step.</h2><p>Explore generated practice for IELTS Academic, General Training, PTE Academic and PTE Core. Our teacher-reviewed collection remains a separate choice.</p></div><a class="text-link" href="generated-practice.php">Explore generated questions <?= icon('arrow', '', 19) ?></a></div>
         <div class="platform-stat-grid">
-            <article><span class="platform-target">QUESTION BANK TARGET</span><strong>30,000</strong><h3>Practice questions</h3><p><?= number_format((int) $reviewedBank['question_count']) ?> teacher-reviewed questions published. New drafts stay private until an approved teacher reviews them.</p></article>
-            <article><span class="platform-target">MOCK LIBRARY TARGET</span><strong>3,000</strong><h3>Mock versions</h3><p><?= number_format((int) $reviewedBank['mock_count']) ?> reviewed versions published. Assembled papers may reuse reviewed questions; they are labelled before you start.</p></article>
+            <article><span class="platform-target">GENERATED · AVAILABLE NOW</span><strong><?= number_format((int) $generatedBank['question_count']) ?></strong><h3>Question variants</h3><p>Free generated practice across four courses, with skill and question-type filters. These variations have not been certified by teachers.</p><a class="text-link" href="generated-practice.php">Find your next question →</a></article>
+            <article><span class="platform-target">GENERATED · AVAILABLE NOW</span><strong><?= number_format((int) $generatedBank['mock_count']) ?></strong><h3>Assembled mock variants</h3><p>Full timed sessions assembled from generated question variants. Your first completed full mock is free with an account; further mocks use an access pass.</p><a class="text-link" href="generated-mocks.php">Explore generated mocks →</a></article>
             <article><span class="platform-target">AVAILABLE TODAY</span><strong><?= count(nisha_exams()) ?></strong><h3>Original starter mocks</h3><p>IELTS Academic, General Training, PTE Academic and PTE Core. These independent starter papers are separate from the new teacher-reviewed collection.</p></article>
         </div>
-        <p class="platform-disclosure">30,000 questions and 3,000 mock versions are expansion targets, not a claim that this content is already reviewed or available. Publication totals update as teachers approve content.</p>
-        <div class="platform-inline-actions"><a class="btn btn-outline" href="mock-library.php">Explore the reviewed mock library <?= icon('arrow', '', 17) ?></a><a class="text-link" href="teacher-portal.php">Help shape the library as a teacher <?= icon('arrow', '', 17) ?></a></div>
+        <p class="platform-disclosure"><?= e(nisha_generated_public_disclosure()) ?></p>
+        <div class="platform-reviewed-note"><h3>Prefer a teacher-reviewed collection?</h3><p><strong><?= number_format((int) $reviewedBank['question_count']) ?> questions and <?= number_format((int) $reviewedBank['mock_count']) ?> mock versions</strong> are currently published with teacher certification. Our targets for that separate collection remain 30,000 reviewed questions and 3,000 reviewed mocks; these reviewed totals grow only after teachers approve content.</p><div class="platform-inline-actions"><a class="btn btn-outline" href="question-bank.php">Browse reviewed questions <?= icon('arrow', '', 17) ?></a><a class="text-link" href="mock-library.php">Reviewed mock library <?= icon('arrow', '', 17) ?></a><a class="text-link" href="teacher-portal.php">Help review as a teacher <?= icon('arrow', '', 17) ?></a></div></div>
     </section>
     <section class="section fullmock-section container" id="full-mocks" aria-labelledby="full-mock-heading">
         <div class="section-heading"><div><div class="eyebrow">MAKE TEST DAY FEEL FAMILIAR</div><h2 id="full-mock-heading">Big day practice. From start to finish.</h2><p>Real-world topics, a running clock, and space to find your exam rhythm.</p></div><a class="text-link" href="exams.php">Explore the exam room <?= icon('arrow', '', 19) ?></a></div>

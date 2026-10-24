@@ -66,6 +66,14 @@
         $(id).hidden = !message;
     }
 
+    function contentSourceNotice(id, target) {
+        if (!$(id)) return;
+        const generated = target?.content_source === 'generated';
+        notice(id, generated
+            ? target.format_note || 'Generated practice · Not teacher-reviewed. Variants may reuse questions and scenarios; assembled mocks are not independent unseen papers.'
+            : target?.teacher_reviewed === true ? 'Teacher-reviewed practice. Assembled mocks may reuse reviewed questions.' : '');
+    }
+
     function loadState(target) {
         try {
             const raw = localStorage.getItem(storageKey(target));
@@ -468,6 +476,7 @@
         ensureItemClock();
         view('runner');
         $('runner-exam-name').textContent = exam.name;
+        contentSourceNotice('runner-content-source', exam);
         $('runner-catalog').textContent = exam.session_type && exam.session_type !== 'full' ? '← Practice library' : '← My mock exams';
         $('runner-title').textContent = `${state.sectionIndex + 1}. ${part.title}`;
         $('runner-section-description').textContent = part.instructions || '';
@@ -1387,6 +1396,7 @@
         $('exam-result-points').nextElementSibling.textContent = result.objective_total ? 'OBJECTIVE PRACTICE POINTS' : 'WRITING & SPEAKING PRACTICE';
         $('exam-result-points').replaceChildren(...score.childNodes);
         $('exam-result-name').textContent = result.name;
+        contentSourceNotice('result-content-source', result);
         $('exam-result-summary').textContent = `${result.answered_items} of ${result.total_items} tasks have a text response · ${formatTime(result.elapsed_seconds)} elapsed. ${result.incomplete ? 'This attempt is incomplete: not all sections were finished. ' : ''}Writing and speaking use separate AI practice estimates and improvement guidance. Open the AI review below to request your score.`;
         $('retry-save-result').hidden = !(config.signedIn && !envelope.saved && state && state.attemptId === result.attempt_id);
         $('exam-result-save').replaceChildren();

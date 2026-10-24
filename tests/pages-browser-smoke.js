@@ -13,7 +13,7 @@ if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw new Erro
 const php = process.env.NISHA_PHP_BIN || '/workspace/.tools/bin/php';
 const email = `pages-browser-${crypto.randomUUID()}@example.test`;
 const password = crypto.randomBytes(20).toString('hex');
-const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php', 'pricing.php', 'question-bank.php', 'mock-library.php'];
+const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php', 'pricing.php', 'question-bank.php', 'mock-library.php', 'generated-practice.php', 'generated-mocks.php'];
 const privatePages = ['dashboard.php', 'ai-reviews.php', 'logout.php', 'teacher-portal.php', 'coaching.php'];
 const ownerPages = ['admin.php', 'billing-settings.php', 'content-review.php'];
 const errors = [], failures = [], external = [], links = new Set(), assets = new Set();
@@ -95,7 +95,14 @@ async function inspectPage(route, theme, width) {
 
     await page.goto(`${base}/index.php`);
     const targetLabels = await page.locator('.platform-target').allTextContents();
-    ok(targetLabels.filter(label => label.includes('TARGET')).length === 2 && (await page.locator('.platform-disclosure').innerText()).includes('expansion targets'), 'The landing page advertises 30,000 questions and 3,000 mocks as targets, separately from reviewed publication totals');
+    const generatedTotals = await page.locator('.platform-stat-grid article strong').allTextContents();
+    const reviewedNote = await page.locator('.platform-reviewed-note').innerText();
+    ok(targetLabels.filter(label => label.includes('GENERATED')).length === 2
+        && generatedTotals[0] === '30,000' && generatedTotals[1] === '3,000'
+        && /not teacher-reviewed/i.test(await page.locator('.platform-disclosure').innerText())
+        && /currently published with teacher certification/.test(reviewedNote)
+        && /targets.*separate collection/.test(reviewedNote),
+    'The landing page distinguishes available generated variants from actual teacher-reviewed counts and review targets');
     await page.setViewportSize({ width: 390, height: 844 });
     const menu = page.locator('.menu-toggle');
     await menu.click();

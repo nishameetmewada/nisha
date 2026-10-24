@@ -1,4 +1,16 @@
-# Teacher-reviewed publishing
+# Generated practice and teacher-reviewed publishing
+
+## Generated library
+
+`generated-practice.php` and `generated-mocks.php` provide a separate public generated collection: **30,000 question variants** (7,500 per course) and **3,000 assembled mock variants** (750 per course). The content is produced by deterministic NISHA templates, not by a live model call. Browsing and starting generated practice does not spend OpenAI credit. Optional writing/speaking reviews use the existing AI API and quotas.
+
+These are parameterised variations, not 30,000 independent editorial questions. Topics, question structures and individual questions repeat across variants and assembled papers. The templates currently contain 23,401 distinct normalised question structures across the draft slots. Counts describe available variant slots, not uniqueness, teacher endorsement or official exam equivalence. Listening uses browser speech; generated mock task mixes are learning exercises rather than exact official test replicas.
+
+Generated sessions use separate `xp.` (question) and `xm.` (mock) identifiers and are labelled as **generated, not teacher-reviewed** in catalogues, setup, the exam room and saved results. They resolve without a review-ledger entry. Generated full mocks use the same account requirement and one-free-then-paid access checks as other full mocks; guided generated questions remain free. Existing account/result/payment tables are reused, so no new database migration is needed for this update.
+
+The teacher-reviewed libraries at `question-bank.php` and `mock-library.php` remain separate. Making generated variants public does not create reviews, approve teachers, publish draft identifiers or change reviewed inventory totals.
+
+## Teacher-reviewed collection
 
 The expansion targets are **30,000 reviewed practice questions** and **3,000 reviewed assembled mock versions**. They are not claims about currently available content. Public totals come from the review ledger. There are zero newly reviewed publications until approved teachers actually review and publish them.
 
@@ -6,7 +18,7 @@ The existing four starter mocks and guided exercises remain a separate original 
 
 ## Drafts and editorial quality
 
-`includes/generated-library.php` provides a private drafting pool of 30,000 parameterised question slots across four courses, using 50 original topic cards and 15 evaluation perspectives. Some tasks reuse source material or question structures. These are **draft variations**, not 30,000 independent editorial questions. Structural validation cannot establish correctness, ambiguity, exam suitability or editorial originality.
+`includes/generated-library.php` provides the drafting pool of 30,000 parameterised question slots across four courses, using 50 original topic cards and 15 evaluation perspectives. The same templates support the separately labelled public generated library. Some tasks reuse source material or question structures. These are **draft variations** for teacher review, not 30,000 independent editorial questions. Structural validation cannot establish correctness, ambiguity, exam suitability or editorial originality.
 
 Teachers should edit or reject repeated or unsuitable drafts. Publishing rejects normalised exact duplicate questions across courses and reordered copies of the same paper. It cannot detect every paraphrased duplicate; that remains part of teacher review. Targets may require teachers to develop further substantive content rather than approve the entire generated pool.
 
@@ -16,7 +28,7 @@ An assembled paper uses a stable selection from the question bank. It has the st
 
 1. Import `database/migrations/006_content_reviews.sql` after the account, commerce and teacher migrations. `database/schema.sql` includes the full installation schema.
 2. Register a real teacher account. The owner must approve its teacher profile in the administration portal. An owner/admin role alone cannot certify teacher-reviewed content.
-3. Open `content-review.php`. Ordinary students receive a forbidden page; guests are asked to sign in. No unreviewed question source or answer is returned through the public resolver or catalogue.
+3. Open `content-review.php`. Ordinary students receive a forbidden page; guests are asked to sign in. Unreviewed `gp.`/`gm.` draft identifiers cannot resolve through the teacher-reviewed catalogue. Separately labelled `xp.`/`xm.` generated variants use the public generated library described above.
 4. Choose a draft reference, such as `gp.ielts-academic.00001`. Edit its title, prompt, source, options, accepted answers, explanation and rubric as applicable. Check the actual question and correct answer, add a specific review note, and explicitly certify it.
 5. For papers, open a reference such as `gm.ielts-academic.0001`. The queue links every required question. Complete those reviews first, then read the full assembled paper and certify it separately.
 

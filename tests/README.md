@@ -77,8 +77,8 @@ The AI browser suite also restores an old local result, preserves its responses/
 ## All-page browser audit
 
 Run `node tests/pages-browser-smoke.js` against the local PHP server and imported
-database. This loopback-only suite checks 17 public, student, owner and reviewer pages in
-light and dark mode at 320, 390, 768 and 1440 pixels. Its 170 checks cover readable
+database. This loopback-only suite checks 19 public, student, owner and reviewer pages in
+light and dark mode at 320, 390, 768 and 1440 pixels. Its 186 checks cover readable
 inputs, mobile overflow, images, scripts and styles, JavaScript exceptions,
 navigation and keyboard theme controls, internal links and anchors, legacy
 IELTS/PTE practice links, and HTTP launches for all 139 sessions. It also creates
@@ -105,6 +105,12 @@ The commerce suite passes 54 checks for one-free-mock reservation, concurrency/i
 
 The payment HTTP suite passes 18 checks; the mock-access browser/API suite passes 21 checks; the teacher/owner platform suite passes 17 checks, including stale video-approval rejection. The platform suite temporarily changes only its own owner-managed policy fixture and restores it, so run it sequentially with other tests that edit that singleton policy.
 
-`php scripts/validate-content-drafts.php --all` validates 30,000 question slots and 3,000 assembled draft paper slots without publishing. The current templates contain 23,401 distinct normalised question structures, so repeated slots need substantive teacher editing or rejection. Structural validity does not establish 30,000 unique, correct, teacher-reviewed questions. Public inventory starts at zero and comes only from the human review ledger.
+`php scripts/validate-content-drafts.php --all` validates 30,000 question slots and 3,000 assembled draft paper slots without publishing. The current templates contain 23,401 distinct normalised question structures, so repeated slots need substantive teacher editing or rejection. Structural validity does not establish 30,000 unique, correct, teacher-reviewed questions. Teacher-reviewed public inventory starts at zero and comes only from the human review ledger. The separate public generated library is explicitly unreviewed.
+
+## Public generated library
+
+`php tests/generated-public-integrity.php --all` passes 328,600 checks over all 30,000 generated question variants and 3,000 assembled mock variants. The faster default run samples every task format and the first/last bounds. Checks cover distinct public IDs, known source/answer regressions, structural validity, deterministic versions, course/skill/type pagination, sanitizer behavior and objective grading. These checks do not certify editorial quality, official test equivalence or unique unseen content.
+
+`node tests/generated-library-browser-smoke.js` passes 50 checks of the real public generated catalogues and runner on loopback only: four courses, skill/type filters, page boundaries, both themes and mobile/desktop layout, guest feedback, saved source labels and history, and the shared first-free-then-paid mock boundary. It creates and cleans only its own temporary student; no model, payment or teacher-publication calls occur.
 
 If an OpenAI credential is present in the development environment, run the no-key HTTP/browser AI suite with scoped `NISHA_OPENAI_API_KEY='' OPENAI_API_KEY='' node tests/ai-review-browser-smoke.js`. It starts its own local server and uses explicit provider fixtures. Do not call a real model merely to run these regression checks.

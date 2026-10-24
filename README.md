@@ -21,7 +21,8 @@ A responsive PHP and MySQL study website for students preparing for IELTS and PT
 - Hosted Stripe Checkout, signed payment webhooks, payment/access history and an owner billing-settings page. Checkout stays disabled until private provider setup is complete.
 - Teacher applications, moderated coaching videos, paid-student viewing and a private teacher portal.
 - An owner-approved teacher reward ledger: **90% of positive verified net profit after business operating expenses and carried losses**, apportioned by qualified student video views. Actual payouts are recorded manually after the owner transfers money.
-- A private draft and teacher-review workflow targeting **30,000 practice questions and 3,000 mock versions**. Only reviewed, published content appears in the new public question/mock libraries; these targets are not advertised as already available content.
+- A separate public generated library with **30,000 question variants and 3,000 assembled mock variants** across all four courses, with course, skill and task-type filters. Generated content is labelled as not teacher-reviewed; source scenarios and question structures repeat. It is not 30,000 independent questions or 3,000 unseen papers.
+- A separate teacher-review workflow targeting **30,000 reviewed practice questions and 3,000 reviewed mock versions**. The reviewed question/mock libraries contain only actual teacher-approved publications, with their own live counts.
 
 The configured full mock budgets are 164 minutes for each IELTS version, 140 minutes for PTE Academic and 120 minutes for PTE Core. These are NISHA learning choices; real test counts and delivery arrangements vary. Objective tasks report raw practice points. Writing and speaking offer optional OpenAI API practice estimates, criterion feedback and improvement plans when the site owner configures a key. Self-review remains available. AI estimates are separate from objective points and are not official or validated proficiency scores. Listening uses browser speech rather than professional test recordings. Some same-format questions are shared between course variants and practice modes, as disclosed in the catalogue.
 
@@ -91,6 +92,7 @@ For optional AI coaching, cURL or verified HTTPS streams and fileinfo are also n
 | `includes/header.php`, `includes/footer.php` | Shared navigation and footer |
 | `practice.php`, `assets/js/learning.js`, `assets/css/learning.css` | Searchable course and question-type library |
 | `includes/learning-catalog.php` | Canonical modules and generated practice/section definitions |
+| `generated-practice.php`, `generated-mocks.php`, `includes/generated-public-library.php` | Public generated variants and paged catalogues, separate from reviewed content |
 | `includes/practice/ielts-modules.php` | Additional original IELTS question-type exercises |
 | `quick-practice.php`, `includes/practice-data.php`, `assets/js/practice.js` | Legacy short studio |
 | `includes/exams/` | Original full exam content |

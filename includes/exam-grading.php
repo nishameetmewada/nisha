@@ -204,6 +204,17 @@ function nisha_grade_exam(array $exam, array $submission): array
         'resources' => $exam['resources'] ?? [],
         'grading_note' => 'Objective raw practice points only. Writing/speaking offer optional AI coaching or self-review, separately from these points. These are not official IELTS band scores or PTE scores.',
     ];
+    // Keep the source disclosure with the saved report, even when a generator
+    // changes or the session is no longer available in the current catalogue.
+    if (($exam['content_source'] ?? null) === 'generated') {
+        $result['content_source'] = 'generated';
+        $result['generated'] = true;
+        $result['teacher_reviewed'] = false;
+        $result['format_note'] = $exam['format_note'] ?? 'Generated practice; not teacher-reviewed. Variants may reuse questions and scenarios.';
+    } elseif (($exam['teacher_reviewed'] ?? false) === true) {
+        $result['teacher_reviewed'] = true;
+        $result['format_note'] = $exam['format_note'] ?? '';
+    }
     foreach ($exam['sections'] as $section) {
         $sectionResult = [
             'id' => $section['id'], 'title' => $section['title'], 'score' => 0, 'total' => 0,
