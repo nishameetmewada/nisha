@@ -13,8 +13,9 @@ if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw new Erro
 const php = process.env.NISHA_PHP_BIN || '/workspace/.tools/bin/php';
 const email = `pages-browser-${crypto.randomUUID()}@example.test`;
 const password = crypto.randomBytes(20).toString('hex');
-const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php'];
-const privatePages = ['dashboard.php', 'ai-reviews.php', 'logout.php'];
+const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php', 'pricing.php', 'question-bank.php', 'mock-library.php'];
+const privatePages = ['dashboard.php', 'ai-reviews.php', 'logout.php', 'teacher-portal.php', 'coaching.php'];
+const ownerPages = ['admin.php', 'billing-settings.php', 'content-review.php'];
 const errors = [], failures = [], external = [], links = new Set(), assets = new Set();
 let browser, context, page, checks = 0;
 const ok = (condition, message) => { assert(condition, message); checks++; console.log('PASS', message); };
@@ -44,12 +45,21 @@ async function inspectPage(route, theme, width) {
         overflow: document.documentElement.scrollWidth > innerWidth,
         brokenImages: [...document.images].filter(image => !image.complete || !image.naturalWidth).map(image => image.getAttribute('src')),
         phpErrors: /(?:Fatal error|Warning:|Notice:|Parse error):?\s*(?:<|[A-Za-z_\\])/i.test(document.body.innerText),
+        credentialLeak: /\b(?:sk_(?:live|test)_[A-Za-z0-9_]{16,}|whsec_[A-Za-z0-9_]{16,}|sk-proj-[A-Za-z0-9_-]{20,})\b/.test(document.documentElement.outerHTML),
         smallInputs: [...document.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]),textarea,select')]
             .filter(input => input.getBoundingClientRect().height > 0 && parseFloat(getComputedStyle(input).fontSize) < 16).length,
     }));
+    if (shape.overflow) {
+        const overflow = await page.evaluate(() => [...document.querySelectorAll('main *')].map(element => {
+            const rect = element.getBoundingClientRect();
+            return { selector: `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${typeof element.className === 'string' && element.className ? `.${element.className.trim().replace(/\s+/g, '.')}` : ''}`, left: Math.round(rect.left), right: Math.round(rect.right), width: Math.round(rect.width) };
+        }).filter(element => element.width > 0 && (element.left < -1 || element.right > innerWidth + 1)).slice(0, 18));
+        console.error('Overflow elements:', JSON.stringify(overflow));
+    }
     assert(!shape.overflow, `${route} must fit ${width}px`);
     assert.deepEqual(shape.brokenImages, [], `${route} must load images`);
     assert(!shape.phpErrors, `${route} must not expose PHP errors`);
+    assert(!shape.credentialLeak, `${route} must not embed provider credentials`);
     assert.equal(shape.smallInputs, 0, `${route} inputs should remain readable`);
     for (const href of await page.locator('a[href]').evaluateAll(elements => elements.map(element => element.href))) {
         const url = new URL(href);
@@ -78,12 +88,14 @@ async function inspectPage(route, theme, width) {
     for (const theme of ['light', 'dark']) for (const width of [320, 390, 768, 1440]) for (const route of publicPages) {
         await inspectPage(route, theme, width);
     }
-    for (const route of privatePages) {
+    for (const route of [...privatePages, ...ownerPages]) {
         await page.goto(`${base}/${route}`);
         ok(new URL(page.url()).pathname === '/login.php', `${route} redirects guests to sign in`);
     }
 
     await page.goto(`${base}/index.php`);
+    const targetLabels = await page.locator('.platform-target').allTextContents();
+    ok(targetLabels.filter(label => label.includes('TARGET')).length === 2 && (await page.locator('.platform-disclosure').innerText()).includes('expansion targets'), 'The landing page advertises 30,000 questions and 3,000 mocks as targets, separately from reviewed publication totals');
     await page.setViewportSize({ width: 390, height: 844 });
     const menu = page.locator('.menu-toggle');
     await menu.click();
@@ -91,7 +103,7 @@ async function inspectPage(route, theme, width) {
     await page.keyboard.press('Escape');
     ok(await menu.getAttribute('aria-expanded') === 'false' && await menu.getAttribute('aria-label') === 'Open navigation' && !(await page.locator('#main-nav').isVisible()), 'Escape closes phone navigation and restores its accessible label');
     await menu.click();
-    await page.locator('#main-nav a[href="index.php#how-it-works"]').click();
+    await page.locator('#main-nav a').first().click();
     ok(await menu.getAttribute('aria-expanded') === 'false' && await menu.getAttribute('aria-label') === 'Open navigation', 'Selecting a phone navigation link closes it with the correct label');
     const beforeTheme = await page.locator('html').getAttribute('data-theme');
     await page.locator('.theme-toggle').focus();
@@ -116,7 +128,7 @@ async function inspectPage(route, theme, width) {
         const url = new URL(href);
         // Sign-in-only links are checked below in their own session. Launch links
         // are exhaustively checked against the canonical catalogue separately.
-        if (/\/(?:dashboard|ai-reviews|logout)\.php$/.test(url.pathname) || url.searchParams.has('exam') && url.pathname.endsWith('/exams.php')) continue;
+        if (/\/(?:dashboard|ai-reviews|logout|teacher-portal|coaching|admin|billing-settings|content-review)\.php$/.test(url.pathname) || url.searchParams.has('exam') && url.pathname.endsWith('/exams.php')) continue;
         const response = await context.request.get(url.href);
         if (response.status() !== 200) { brokenLinks.push(`${response.status()} ${url.pathname}${url.search}`); continue; }
         if (url.hash) {
@@ -133,26 +145,38 @@ async function inspectPage(route, theme, width) {
         assert(match, `Session ${id} must provide runner data`);
         const data = JSON.parse(match[1]);
         assert.equal(data.requestedId, id);
-        assert(data.exams[id] && data.exams[id].sections.length > 0, `Session ${id} must resolve to populated public content`);
+        const session = data.exams[id];
+        assert(session && session.sections.length > 0, `Session ${id} must resolve to a catalogue entry`);
+        if (session.session_type === 'full') {
+            assert.equal(session.requires_access, true, `Full mock ${id} requires an authenticated start`);
+            assert.deepEqual(session.resources, [], `Full mock ${id} must not expose stimuli before reservation`);
+            assert(session.sections.every(section => !Object.hasOwn(section, 'items') && section.item_count > 0), `Full mock ${id} must expose section counts, not its questions`);
+        } else {
+            assert(session.sections.every(section => Array.isArray(section.items) && section.items.length > 0), `Free session ${id} must retain actual interactive questions`);
+        }
     }
-    ok(catalog.length === 139, `All ${catalog.length} practice, sectional and full-mock launch URLs return their requested session`);
+    ok(catalog.length === 139, `All ${catalog.length} canonical launches resolve, with free exercises usable and full papers protected`);
 
     await page.goto(`${base}/register.php`);
     await page.locator('#name').fill('Page Audit'); await page.locator('#email').fill(email);
     await page.locator('#password').fill(password); await page.locator('#password_confirmation').fill(password);
     await Promise.all([page.waitForURL('**/dashboard.php'), page.locator('.auth-card button[type="submit"]').click()]);
     const saved = await page.evaluate(async attemptId => {
-        const dataResponse = await fetch('exams.php?exam=ielts-academic-01');
-        const html = await dataResponse.text();
-        const document = new DOMParser().parseFromString(html, 'text/html');
-        const exam = JSON.parse(document.querySelector('#exam-data').textContent).exams['ielts-academic-01'];
+        const token = window.document.querySelector('meta[name="csrf-token"]').content;
+        const start = await fetch('api/start-mock.php', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
+            body: JSON.stringify({ exam_id: 'ielts-academic-01', attempt_id: attemptId }),
+        });
+        const access = await start.json();
+        if (start.status !== 200 || !access.success) return { status: start.status, data: access };
+        const exam = access.exam;
         const response = await fetch('api/complete-exam.php', {
-            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.document.querySelector('meta[name="csrf-token"]').content },
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': token },
             body: JSON.stringify({ exam_id: exam.id, exam_version: exam.version, attempt_id: attemptId, answers: {}, elapsed_seconds: 60, completed_sections: [], assisted: true }),
         });
         return { status: response.status, data: await response.json() };
     }, `pages-browser-${crypto.randomUUID()}`);
-    ok(saved.status === 200 && saved.data.saved === true, 'A real saved mock populates the new student history');
+    ok(saved.status === 200 && saved.data.saved === true, 'A genuine reserved free mock is completed and saved to the new student history');
     for (const theme of ['light', 'dark']) for (const width of [320, 390, 768, 1440]) for (const route of privatePages) {
         await inspectPage(route, theme, width);
     }
@@ -163,6 +187,20 @@ async function inspectPage(route, theme, width) {
     ok((await page.locator('#exam-result-name').innerText()).includes('IELTS'), 'Dashboard result link restores the owned saved result');
     await page.goto(`${base}/ai-reviews.php`);
     ok(await page.locator('.empty-state').isVisible(), 'Private AI history has a useful empty state before a review is requested');
+
+    for (const route of ownerPages) {
+        const response = await context.request.get(`${base}/${route}`);
+        ok(response.status() === 403 && !(await response.text()).includes('Fatal error'), `${route} denies an ordinary student without exposing owner controls`);
+    }
+    execFileSync(php, ['-r', 'require "includes/bootstrap.php"; $q=db()->prepare("SELECT id FROM users WHERE email=?"); $q->execute([$argv[1]]); $id=(int)$q->fetchColumn(); if (!$id) exit(1); $q=db()->prepare("INSERT INTO user_roles(user_id,role) VALUES (?,?)"); $q->execute([$id,"admin"]);', email], { cwd: root, stdio: 'pipe' });
+    const ownerWithoutTeacher = await context.request.get(`${base}/content-review.php`);
+    ok(ownerWithoutTeacher.status() === 403, 'An owner role alone cannot certify content without an approved teacher profile');
+    execFileSync(php, ['-r', 'require "includes/bootstrap.php"; $q=db()->prepare("SELECT id FROM users WHERE email=?"); $q->execute([$argv[1]]); $id=(int)$q->fetchColumn(); $q=db()->prepare("INSERT INTO teacher_profiles(user_id,display_name,bio,status,reviewed_by) VALUES (?,?,?,?,?)"); $q->execute([$id,"Page Audit Teacher","Disposable local browser fixture for approved teacher page coverage.","approved",$id]);', email], { cwd: root, stdio: 'pipe' });
+    for (const theme of ['light', 'dark']) for (const width of [390, 1440]) await inspectPage('teacher-portal.php', theme, width);
+    for (const theme of ['light', 'dark']) for (const width of [320, 390, 768, 1440]) for (const route of ownerPages) {
+        await inspectPage(route, theme, width);
+    }
+    ok(true, 'Owner controls and approved-teacher review pages open only after their explicit role checks');
     await page.goto(`${base}/logout.php`);
     await Promise.all([page.waitForURL('**/index.php'), page.locator('form[action="logout.php"] button').click()]);
     await page.goto(`${base}/ai-reviews.php`);
@@ -171,7 +209,7 @@ async function inspectPage(route, theme, width) {
     ok(assets.size >= 10 && failures.length === 0, `All ${assets.size} loaded local assets succeed with no page HTTP errors`);
     ok(errors.length === 0, 'All audited pages run without JavaScript exceptions');
     ok(external.length === 0, 'Page rendering needs no external network requests');
-    console.log(`Page browser checks passed: ${checks}; ${publicPages.length + privatePages.length} pages, ${catalog.length} session launches, ${assets.size} assets`);
+    console.log(`Page browser checks passed: ${checks}; ${publicPages.length + privatePages.length + ownerPages.length} pages, ${catalog.length} session launches, ${assets.size} assets`);
 })().catch(error => { console.error(error.stack); if (failures.length) console.error('Failed requests:', failures); if (errors.length) console.error('JavaScript errors:', errors); process.exitCode = 1; }).finally(async () => {
     if (context) await context.close();
     if (browser) await browser.close();

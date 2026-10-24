@@ -30,6 +30,10 @@ async function currentState(examId) {
 }
 async function start(examId) {
     await page.goto(`${base}/exams.php?exam=${examId}&start=1`);
+    if (await page.locator('#exam-result').isVisible()) {
+        await page.locator('#start-new-attempt').click();
+        await acceptDialog();
+    }
     await page.locator('#exam-setup-dialog').waitFor({ state: 'visible' });
     await page.locator('#assisted-mode').check(); await page.locator('#ready-confirmed').check();
     await page.locator('#begin-exam').click();
@@ -117,6 +121,15 @@ async function finishEveryItem(examId) {
 (async () => {
     browser = await chromium.launch({ executablePath: process.env.NISHA_CHROMIUM_BIN || '/usr/bin/chromium', headless: true, args: ['--no-sandbox', '--use-fake-ui-for-media-stream', '--use-fake-device-for-media-stream'] });
     await attach();
+    // This broad runner suite exercises paid access with a disposable local
+    // ledger fixture. The separate access suite proves the actual free gate.
+    fixtureEmail = `full-mock-browser-${crypto.randomUUID()}@example.test`;
+    const password = crypto.randomBytes(20).toString('hex');
+    await page.goto(`${base}/register.php`);
+    await page.locator('#name').fill('Mock Browser Check'); await page.locator('#email').fill(fixtureEmail);
+    await page.locator('#password').fill(password); await page.locator('#password_confirmation').fill(password);
+    await page.locator('button[type="submit"]').click(); await page.waitForURL('**/dashboard.php');
+    execFileSync(php, ['-r', 'require "includes/bootstrap.php"; $q=db()->prepare("SELECT id FROM users WHERE email=?");$q->execute([$argv[1]]);$id=(int)$q->fetchColumn();if(!$id)exit(1);$order=bin2hex(random_bytes(16));$q=db()->prepare("INSERT INTO payment_orders(id,user_id,amount_minor,currency,access_days,status,paid_at) VALUES(?,?,2900,\'aud\',30,\'paid\',UTC_TIMESTAMP())");$q->execute([$order,$id]);$q=db()->prepare("INSERT INTO student_entitlements(user_id,order_id,starts_at,expires_at) VALUES(?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()+INTERVAL 1 DAY)");$q->execute([$id,$order]);', fixtureEmail], { cwd: root, stdio: 'pipe' });
     await page.goto(`${base}/exams.php`);
     ok(await page.locator('.full-exam-card').count() === 4, 'All four full mocks available');
     const containsAnswer = await page.evaluate(() => {
@@ -145,12 +158,6 @@ async function finishEveryItem(examId) {
     const result = JSON.parse(fs.readFileSync(path.join(artifactDir, 'ielts-result.json'), 'utf8'));
     ok(result.result.sections[2].ungraded_items === 2 && result.result.sections[3].ungraded_items === 3, 'Writing and speaking remain ungraded in downloaded report');
     await page.screenshot({ path: path.join(artifactDir, 'ielts-result.png'), fullPage: true });
-    await page.goto(`${base}/register.php`);
-    fixtureEmail = `full-mock-browser-${Date.now()}@example.test`;
-    const password = crypto.randomBytes(20).toString('hex');
-    await page.locator('#name').fill('Mock Browser Check'); await page.locator('#email').fill(fixtureEmail);
-    await page.locator('#password').fill(password); await page.locator('#password_confirmation').fill(password);
-    await page.locator('button[type="submit"]').click(); await page.waitForURL('**/dashboard.php');
     await start('pte-academic-01');
     ok(await page.locator('#previous-item').isHidden() && await page.locator('#question-map-wrap').isHidden(), 'PTE exposes forward-only navigation');
     let fakeUnsaved = true;

@@ -52,7 +52,7 @@ to a temporary directory outside the checkout.
 
 Run `php tests/learning-integrity.php` for the four-course catalogue, all generated practice/section definitions, known type coverage, resources, answer validation and correct/incorrect/skipped grading. It needs no database or network.
 
-With the local PHP server running, run `node tests/learning-browser-smoke.js`. It uses Playwright/Chromium and the same loopback-only guard and environment overrides as the full-mock suite. It creates no account. Coverage includes course/search/skill navigation, every response control, server feedback and rejection paths, untimed restore, timed expiry, changed/shared audio resources, visual rendering, self-review-only results and mobile overflow. It checks public JSON for leaked answer keys and unexpected external network requests. The checks use deterministic speech stubs; browser voice quality remains device dependent.
+With the local PHP server running, run `node tests/learning-browser-smoke.js`. It uses Playwright/Chromium and the same loopback-only guard and environment overrides as the full-mock suite. Guided and sectional cases run as guests; full-mock launch cases use one exact disposable account and a synthetic paid-access ledger, cleaned afterward. Coverage includes course/search/skill navigation, every response control, server feedback and rejection paths, untimed restore, timed expiry, changed/shared audio resources, visual rendering, AI availability and mobile overflow. It checks public JSON for leaked answer keys and unexpected external network requests. The checks use deterministic speech stubs; browser voice quality remains device dependent.
 
 At this release, the pure suites pass 11,543 full-exam assertions and 7,936 library assertions across 139 sessions. Browser suites pass 45 full-mock checks and 53 library checks. These counts cover exercised cases and are not an editorial guarantee for every possible response.
 
@@ -77,12 +77,34 @@ The AI browser suite also restores an old local result, preserves its responses/
 ## All-page browser audit
 
 Run `node tests/pages-browser-smoke.js` against the local PHP server and imported
-database. This loopback-only suite checks all nine public and account pages in
-light and dark mode at 320, 390, 768 and 1440 pixels. Its 91 checks cover readable
+database. This loopback-only suite checks 17 public, student, owner and reviewer pages in
+light and dark mode at 320, 390, 768 and 1440 pixels. Its 170 checks cover readable
 inputs, mobile overflow, images, scripts and styles, JavaScript exceptions,
 navigation and keyboard theme controls, internal links and anchors, legacy
 IELTS/PTE practice links, and HTTP launches for all 139 sessions. It also creates
 one temporary student, saves a genuine mock result, opens its dashboard and
-private result/history, and signs out. Cleanup deletes only that exact student
-and its dependent results. It makes no paid AI calls and does not establish that
+private result/history, and signs out. It also checks owner/reviewer permissions,
+metadata-only full papers before access approval, and 21 loaded assets. Cleanup deletes only its exact fixture accounts
+and their dependent results. It makes no paid AI calls and does not establish that
 a separately deployed Hostinger database or API key is configured correctly.
+
+## Payments, teachers and human review
+
+The following checks use local fixtures and do not create real charges, teacher payouts or production content approvals:
+
+```sh
+php tests/commerce-integrity.php
+php tests/teachers-integrity.php
+php tests/content-review-integrity.php --database
+node tests/commerce-http-smoke.js
+node tests/mock-access-browser-smoke.js
+node tests/platform-browser-smoke.js
+```
+
+The commerce suite passes 54 checks for one-free-mock reservation, concurrency/idempotency, payment bindings, signed webhook replay handling, paused checkout settlement, and refund/dispute revocation. Teacher tests pass 50 checks for role approvals, video revisions, elapsed/unique watch coverage, 90% positive net-profit allocation, carried losses and payout records. Content tests pass 108 checks for draft secrecy, explicit approved-teacher certification, duplicate rejection, frozen edits and paper dependency withdrawals. These three PHP suites use disposable databases.
+
+The payment HTTP suite passes 18 checks; the mock-access browser/API suite passes 21 checks; the teacher/owner platform suite passes 17 checks, including stale video-approval rejection. The platform suite temporarily changes only its own owner-managed policy fixture and restores it, so run it sequentially with other tests that edit that singleton policy.
+
+`php scripts/validate-content-drafts.php --all` validates 30,000 question slots and 3,000 assembled draft paper slots without publishing. The current templates contain 23,401 distinct normalised question structures, so repeated slots need substantive teacher editing or rejection. Structural validity does not establish 30,000 unique, correct, teacher-reviewed questions. Public inventory starts at zero and comes only from the human review ledger.
+
+If an OpenAI credential is present in the development environment, run the no-key HTTP/browser AI suite with scoped `NISHA_OPENAI_API_KEY='' OPENAI_API_KEY='' node tests/ai-review-browser-smoke.js`. It starts its own local server and uses explicit provider fixtures. Do not call a real model merely to run these regression checks.

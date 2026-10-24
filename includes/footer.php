@@ -5,7 +5,7 @@
             <p>A little practice.<br>A world of possibilities.</p>
         </div>
         <div class="footer-links"><span>YOUR NEXT CHAPTER</span><a href="exams.php">Full mock exams</a><a href="practice.php?exam=ielts">IELTS practice</a><a href="practice.php?exam=pte">PTE practice</a><a href="dashboard.php">Your progress</a></div>
-        <div class="footer-links"><span>FIND YOUR WAY</span><a href="index.php#why-nisha">Why NISHA</a><a href="index.php#how-it-works">How it works</a><a href="index.php#faq">Common questions</a></div>
+        <div class="footer-links"><span>GROW WITH NISHA</span><a href="question-bank.php">Reviewed question bank</a><a href="mock-library.php">Reviewed mock library</a><a href="coaching.php">Teacher coaching</a><a href="teacher-portal.php">Teach with NISHA</a><a href="pricing.php">Access plans</a></div>
         <div class="footer-note"><?= icon('heart', '', 24) ?><p>Made for big dreams<br>and everyday progress.</p><a href="register.php">Start your story <?= icon('arrow', '', 16) ?></a></div>
     </div>
     <div class="container footer-bottom"><p>© <?= date('Y') ?> NISHA. Keep moving forward.</p><p>Independent practice platform. Not affiliated with IELTS or Pearson PTE.</p></div>

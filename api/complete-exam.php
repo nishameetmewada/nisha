@@ -3,6 +3,7 @@ declare(strict_types=1);
 require_once dirname(__DIR__) . '/includes/bootstrap.php';
 require_once dirname(__DIR__) . '/includes/learning-catalog.php';
 require_once dirname(__DIR__) . '/includes/exam-grading.php';
+require_once dirname(__DIR__) . '/includes/commerce.php';
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
@@ -50,9 +51,15 @@ try {
 if ($exam === null) {
     exam_reply(422, ['error' => 'This practice session or mock exam is not available.']);
 }
+$isFullMock = ($exam['session_type'] ?? 'full') === 'full';
+$user = current_user();
+if ($isFullMock && $user === null) exam_reply(401, ['error' => 'Sign in and open your full mock before submitting it.', 'code' => 'mock_login_required']);
 try {
     $submission = nisha_validate_exam_submission($exam, $payload);
+    if ($isFullMock) nisha_commerce_assert_mock(db(), (int) $user['id'], $examId, $submission['attempt_id']);
     $result = nisha_grade_exam($exam, $submission);
+} catch (NishaCommerceException $exception) {
+    exam_reply($exception->httpStatus, ['error' => $exception->publicMessage, 'code' => $exception->errorCode, 'pricing_url' => 'pricing.php']);
 } catch (ExamVersionConflictException $exception) {
     exam_reply(409, ['error' => $exception->getMessage(), 'code' => 'exam_version_changed']);
 } catch (InvalidArgumentException $exception) {
@@ -66,9 +73,13 @@ $envelope = [
     'save_message' => 'Your result is ready. Sign in or create an account before submitting to save future practice and mock results. You can download this result now.',
     'result' => $result,
 ];
-$user = current_user();
 if ($user !== null) {
+    $saveConnection = null;
     try {
+        $saveConnection = db();
+        // A full result and its free-trial consumption form one durable save.
+        // If either part fails, retrying retains the same original attempt.
+        if ($isFullMock) $saveConnection->beginTransaction();
         $statement = db()->prepare('SELECT id, exam_id, result_json FROM exam_runs WHERE user_id = ? AND attempt_id = ? LIMIT 1');
         $statement->execute([$user['id'], $submission['attempt_id']]);
         $existing = $statement->fetch();
@@ -96,9 +107,15 @@ if ($user !== null) {
             }
             $envelope['result'] = json_decode($stored['result_json'], true, 32, JSON_THROW_ON_ERROR);
         }
+        if ($isFullMock) {
+            nisha_commerce_finish_mock(db(), (int) $user['id'], $examId, $submission['attempt_id']);
+            $envelope['mock_access'] = nisha_commerce_overview(db(), (int) $user['id']);
+            $saveConnection->commit();
+        }
         $envelope['saved'] = true;
         $envelope['save_message'] = 'Saved to your NISHA dashboard. You can return to this result anytime.';
     } catch (Throwable $exception) {
+        if ($saveConnection instanceof PDO && $saveConnection->inTransaction()) $saveConnection->rollBack();
         $envelope['result_id'] = null;
         $envelope['save_message'] = 'Your result is ready, but saving is temporarily unavailable. Download a copy and retry saving when your connection is restored.';
     }

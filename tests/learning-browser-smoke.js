@@ -1,10 +1,11 @@
-/* Local integration: PHP on port8000, Playwright and Chromium. No accounts created. */
+/* Local integration: guest practice plus an exact disposable paid-access fixture. */
 'use strict';
 const { chromium } = require('playwright');
 const { execFileSync } = require('node:child_process');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
+const crypto = require('node:crypto');
 
 const root = path.resolve(__dirname, '..');
 const base = process.env.NISHA_TEST_BASE || 'http://127.0.0.1:8000';
@@ -22,7 +23,7 @@ foreach($courses as $course){
 echo json_encode(['courses'=>$courses,'sessions'=>$sessions],JSON_THROW_ON_ERROR);
 `], { cwd: root, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }));
 const artifactDir = fs.mkdtempSync('/tmp/nisha-learning-check-');
-let browser, context, page;
+let browser, context, page, fixtureEmail;
 let checks = 0;
 const errors = [];
 const externalRequests = [];
@@ -292,6 +293,23 @@ const feedbackPayload = (session, item, response) => ({ exam_id: session.id, exa
     await page.locator('#exam-result:not([hidden])').waitFor();
     ok((await page.locator('#exam-result-points').innerText()).trim() === 'Writing & speaking' && await page.locator('#exam-result .ai-review-panel').count() > 0, 'Speaking-only practice offers AI coaching while leaving objective points unscored');
 
+    // Full papers now require an account and a reserved trial or paid access.
+    // Keep the guided/sectional coverage above anonymous, then use a disposable
+    // paid ledger fixture for both full-course launch regressions. The separate
+    // mock-access suite tests genuine free/paid boundaries and webhook grants.
+    fixtureEmail = `learning-browser-${crypto.randomUUID()}@example.test`;
+    const fixturePassword = crypto.randomBytes(20).toString('hex');
+    await page.goto(`${base}/register.php`);
+    await page.locator('#name').fill('Learning Browser Check');
+    await page.locator('#email').fill(fixtureEmail);
+    await page.locator('#password').fill(fixturePassword);
+    await page.locator('#password_confirmation').fill(fixturePassword);
+    await page.locator('button[type="submit"]').click();
+    await page.waitForURL('**/dashboard.php');
+    execFileSync(php, ['-r', `require 'includes/bootstrap.php';
+$q=db()->prepare('SELECT id FROM users WHERE email=?');$q->execute([$argv[1]]);$id=(int)$q->fetchColumn();if(!$id)exit(1);
+$order=bin2hex(random_bytes(16));$q=db()->prepare("INSERT INTO payment_orders(id,user_id,amount_minor,currency,access_days,status,paid_at) VALUES(?,?,2900,'aud',30,'paid',UTC_TIMESTAMP())");$q->execute([$order,$id]);
+$q=db()->prepare('INSERT INTO student_entitlements(user_id,order_id,starts_at,expires_at) VALUES(?,?,UTC_TIMESTAMP(),UTC_TIMESTAMP()+INTERVAL 1 DAY)');$q->execute([$id,$order]);`, fixtureEmail], { cwd: root, stdio: 'pipe' });
     for (const id of ['ielts-general-01', 'pte-core-01']) {
         await start(id);
         ok((await page.locator('#runner-exam-name').innerText()).includes(canonical.sessions[id].name) && (await page.locator('#section-clock').innerText()).trim() !== 'Untimed', `${canonical.sessions[id].name} launches as a timed full mock`);
@@ -302,4 +320,5 @@ const feedbackPayload = (session, item, response) => ({ exam_id: session.id, exa
 })().catch(error => { console.error(error); process.exitCode = 1; }).finally(async () => {
     if (context) await context.close();
     if (browser) await browser.close();
+    if (fixtureEmail) execFileSync(php, ['-r', `require 'includes/bootstrap.php';$q=db()->prepare('DELETE FROM users WHERE email=?');$q->execute([$argv[1]]);`, fixtureEmail], { cwd: root, stdio: 'pipe' });
 });

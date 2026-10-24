@@ -34,9 +34,10 @@ $student = current_user();
         <a href="index.php" class="brand" aria-label="NISHA home"><svg viewBox="0 0 36 36" width="34" height="34" fill="none" aria-hidden="true"><path d="M18 30V16M18 21C7 21 5 14 6 6c9 0 14 5 12 15ZM18 16c0-7 5-11 12-10 1 7-4 13-12 13" fill="currentColor"/><path d="m10 11 8 10M25 11l-7 8" stroke="#f8f7f2" stroke-width="1.5"/></svg><span>NISHA<span class="brand-dot">.</span></span></a>
         <nav class="main-nav" id="main-nav" aria-label="Main navigation">
             <a href="index.php" <?= $activePage === 'home' ? 'aria-current="page"' : '' ?>>Home</a>
-            <a href="exams.php" <?= $activePage === 'exams' ? 'aria-current="page"' : '' ?>>Full mock exams</a>
-            <a href="practice.php" <?= $activePage === 'practice' ? 'aria-current="page"' : '' ?>>Practice library</a>
-            <a href="index.php#how-it-works">How it works</a>
+            <a href="exams.php" <?= $activePage === 'exams' ? 'aria-current="page"' : '' ?>>Mock tests</a>
+            <a href="practice.php" <?= $activePage === 'practice' ? 'aria-current="page"' : '' ?>>Practice</a>
+            <a href="coaching.php" <?= $activePage === 'coaching' ? 'aria-current="page"' : '' ?>>Coaching</a>
+            <a href="pricing.php" <?= $activePage === 'pricing' ? 'aria-current="page"' : '' ?>>Pricing</a>
             <a class="nav-mobile-account" href="<?= $student ? 'dashboard.php' : 'register.php' ?>"><?= $student ? 'My dashboard' : 'Create free account' ?></a>
         </nav>
         <div class="nav-actions">

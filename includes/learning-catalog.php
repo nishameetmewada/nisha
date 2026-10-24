@@ -264,6 +264,10 @@ function nisha_resolve_exam(string $id): ?array
     if (isset($full[$id])) {
         return $full[$id];
     }
+    if (str_starts_with($id, 'gp.') || str_starts_with($id, 'gm.')) {
+        require_once __DIR__ . '/generated-library.php';
+        return nisha_generated_resolve_exam($id);
+    }
     if (!str_starts_with($id, 'practice.') && !str_starts_with($id, 'section.')) {
         return null;
     }

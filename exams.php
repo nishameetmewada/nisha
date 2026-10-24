@@ -4,17 +4,41 @@ require_once __DIR__ . '/includes/bootstrap.php';
 $allExams = require __DIR__ . '/includes/exam-data.php';
 require_once __DIR__ . '/includes/learning-catalog.php';
 require_once __DIR__ . '/includes/ai-review.php';
+require_once __DIR__ . '/includes/commerce.php';
+header('Cache-Control: private, no-store');
 $catalogIds = array_keys($allExams);
 $requestedId = is_string($_GET['exam'] ?? null) ? $_GET['exam'] : '';
 $requestedExam = $requestedId !== '' ? nisha_resolve_exam($requestedId) : null;
 if ($requestedExam !== null) {
     $allExams[$requestedExam['id']] = $requestedExam;
+    if (($requestedExam['session_type'] ?? 'full') === 'full' && !in_array($requestedExam['id'], $catalogIds, true)) $catalogIds[] = $requestedExam['id'];
+}
+/** Full papers are released one at a time by the authenticated start API. */
+function nisha_exam_access_metadata(array $exam): array
+{
+    $items = array_merge(...array_column($exam['sections'], 'items'));
+    $metadata = array_intersect_key($exam, array_flip(['id', 'name', 'exam', 'version', 'description', 'format_note', 'course_id', 'module_id', 'session_type', 'timing_mode']));
+    $metadata['requires_access'] = true;
+    $metadata['item_count'] = count($items);
+    $metadata['task_type_count'] = count(array_unique(array_column($items, 'task_type')));
+    $metadata['has_audio'] = count(array_filter($exam['resources'], static fn (array $resource): bool => $resource['kind'] === 'audio')) > 0;
+    $metadata['resources'] = [];
+    $metadata['sections'] = array_map(static fn (array $section): array => [
+        'id' => $section['id'], 'title' => $section['title'], 'duration_seconds' => $section['duration_seconds'],
+        'navigation' => $section['navigation'], 'item_count' => count($section['items']),
+    ], $exam['sections']);
+    return $metadata;
 }
 $publicExams = [];
 foreach ($allExams as $examId => $exam) {
-    $publicExams[$examId] = exam_public_data($exam);
+    $publicExams[$examId] = ($exam['session_type'] ?? 'full') === 'full' ? nisha_exam_access_metadata($exam) : exam_public_data($exam);
 }
 $examStudent = current_user();
+$mockAccess = null;
+if ($examStudent !== null) {
+    try { $mockAccess = nisha_commerce_overview(db(), (int) $examStudent['id']); }
+    catch (Throwable $exception) { /* The start API reports missing setup without exposing account settings. */ }
+}
 $pageTitle = 'Full mock exams';
 $pageDescription = 'Original IELTS Academic, General Training, PTE Academic and Core practice. Guided question types, timed sections and full mock exams at NISHA.';
 $activePage = 'exams';
@@ -27,6 +51,7 @@ include __DIR__ . '/includes/header.php';
         <section id="exam-catalog" aria-labelledby="catalog-title">
             <div class="exam-intro"><p class="eyebrow">MAKE ROOM FOR YOUR NEXT CHAPTER</p><h1 id="catalog-title" tabindex="-1">The full experience.<br><span>Your own pace of progress.</span></h1><p>Give your preparation a little more purpose. Work through a complete, original mock with timed sections and space to learn from every answer.</p></div>
             <div id="exam-catalog-message" class="exam-notice" role="status" hidden></div>
+            <p class="exam-notice">Your first full mock is free with a student account. After submitting it, choose an access pass for more full mocks. Guided practice and sectional tests remain available. <a href="pricing.php">View access plans →</a></p>
             <div class="exam-catalog-grid" id="exam-cards"></div>
             <div class="exam-how-grid"><div><span>01</span><h2>Settle into the session.</h2><p>Check your audio, choose exam or assisted mode, and find a quiet space. Record your speaking or keep a transcript for feedback.</p></div><div><span>02</span><h2>Keep your focus.</h2><p>Section timers keep running when you leave or reload. Your text answers are saved on this device when storage is available.</p></div><div><span>03</span><h2>Turn effort into insight.</h2><p>Submit the mock for objective practice points and explanations. Sign in and save to request AI writing and speaking coaching when enabled.</p></div></div>
             <div class="exam-privacy"><strong>Your practice. Your privacy.</strong><p>Device autosave contains your written answers and expires after 48 hours. It is separated for guests and each signed-in account. Use “Clear device copy” on shared devices. Recordings stay in this tab unless you explicitly send one to OpenAI for AI coaching. Recordings cannot be restored after a reload; download a copy to keep them.</p></div>
@@ -53,7 +78,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 </main>
 
-<dialog id="exam-setup-dialog" class="exam-dialog exam-setup-dialog" aria-labelledby="setup-title"><div><button type="button" class="exam-dialog-close" id="close-setup" aria-label="Close setup">×</button><p class="eyebrow">A FEW LITTLE THINGS BEFORE YOU BEGIN</p><h2 id="setup-title">Make yourself comfortable.</h2><p id="setup-exam-name"></p><p id="setup-format-note" class="exam-small-copy"></p><div class="exam-equipment"><h3>Let’s check your equipment.</h3><p>Listening uses an English browser speech voice, so it will sound different from a human recording. Use headphones if you have them.</p><div><button type="button" class="btn btn-outline" id="test-exam-audio">Test audio ▶</button><button type="button" class="btn btn-outline" id="test-exam-mic">Check microphone</button></div><p id="equipment-status" role="status">A microphone is optional. You can practise speaking aloud without recording.</p><label class="exam-checkbox"><input type="checkbox" id="audio-confirmed"> I can hear the sample audio.</label></div><label class="exam-checkbox assisted-choice"><input type="checkbox" id="assisted-mode"><span><strong>Use assisted mode</strong><small>Show audio transcripts and allow replays. Your result will be labelled assisted. Choose this if browser audio is unavailable.</small></span></label><label class="exam-checkbox"><input type="checkbox" id="ready-confirmed"><span id="setup-readiness-note">I’m ready for a timed session. I understand that leaving or reloading will not pause the clock, and recordings cannot be restored.</span></label><div class="exam-setup-actions"><button type="button" class="btn btn-primary" id="begin-exam" disabled>Begin full mock →</button><span id="setup-duration"></span></div><p class="exam-small-copy">Browser permissions are requested only when you choose to check or record your microphone. Audio leaves your browser only if you explicitly choose to send a recording to OpenAI for AI coaching after a timed test, or during guided practice. All passages and questions are original NISHA learning material.</p></div></dialog>
+<dialog id="exam-setup-dialog" class="exam-dialog exam-setup-dialog" aria-labelledby="setup-title"><div><button type="button" class="exam-dialog-close" id="close-setup" aria-label="Close setup">×</button><p class="eyebrow">A FEW LITTLE THINGS BEFORE YOU BEGIN</p><h2 id="setup-title">Make yourself comfortable.</h2><p id="setup-exam-name"></p><p id="setup-format-note" class="exam-small-copy"></p><p id="setup-access-message" class="exam-notice" role="status" hidden></p><div class="exam-equipment"><h3>Let’s check your equipment.</h3><p>Listening uses an English browser speech voice, so it will sound different from a human recording. Use headphones if you have them.</p><div><button type="button" class="btn btn-outline" id="test-exam-audio">Test audio ▶</button><button type="button" class="btn btn-outline" id="test-exam-mic">Check microphone</button></div><p id="equipment-status" role="status">A microphone is optional. You can practise speaking aloud without recording.</p><label class="exam-checkbox"><input type="checkbox" id="audio-confirmed"> I can hear the sample audio.</label></div><label class="exam-checkbox assisted-choice"><input type="checkbox" id="assisted-mode"><span><strong>Use assisted mode</strong><small>Show audio transcripts and allow replays. Your result will be labelled assisted. Choose this if browser audio is unavailable.</small></span></label><label class="exam-checkbox"><input type="checkbox" id="ready-confirmed"><span id="setup-readiness-note">I’m ready for a timed session. I understand that leaving or reloading will not pause the clock, and recordings cannot be restored.</span></label><div class="exam-setup-actions"><button type="button" class="btn btn-primary" id="begin-exam" disabled>Begin full mock →</button><span id="setup-duration"></span></div><p class="exam-small-copy">Browser permissions are requested only when you choose to check or record your microphone. Audio leaves your browser only if you explicitly choose to send a recording to OpenAI for AI coaching after a timed test, or during guided practice. All passages and questions are original NISHA learning material.</p></div></dialog>
 <dialog id="exam-confirm-dialog" class="exam-dialog" aria-labelledby="exam-confirm-title"><form method="dialog"><p class="eyebrow">YOUR PRACTICE, YOUR CALL</p><h2 id="exam-confirm-title"></h2><p id="exam-confirm-message"></p><div class="exam-confirm-actions"><button value="cancel" class="btn btn-outline" id="exam-confirm-cancel">Keep practising</button><button value="confirm" class="btn btn-primary" id="exam-confirm-yes">Continue</button></div></form></dialog>
-<script id="exam-data" type="application/json"><?= json_encode(['exams' => $publicExams, 'catalogIds' => $catalogIds, 'requestedId' => $requestedId, 'aiReview' => nisha_ai_public_config(), 'signedIn' => $examStudent !== null, 'userScope' => $examStudent ? 'user-' . (int) $examStudent['id'] : 'guest'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
+<script id="exam-data" type="application/json"><?= json_encode(['exams' => $publicExams, 'catalogIds' => $catalogIds, 'requestedId' => $requestedId, 'aiReview' => nisha_ai_public_config(), 'mockAccess' => $mockAccess, 'signedIn' => $examStudent !== null, 'userScope' => $examStudent ? 'user-' . (int) $examStudent['id'] : 'guest'], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
 <?php include __DIR__ . '/includes/footer.php'; ?>

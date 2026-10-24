@@ -41,6 +41,8 @@ $accuracy = (int) $summary['questions'] > 0
     ? (int) round(100 * (int) $summary['correct'] / (int) $summary['questions'])
     : null;
 $firstName = preg_split('/\s+/u', trim($user['name']))[0] ?? $user['name'];
+require_once __DIR__ . '/includes/teachers.php';
+$isOwner = nisha_is_admin($user);
 $pageTitle = 'Your dashboard';
 $pageDescription = 'Your IELTS and PTE practice progress, recent results, and next steps.';
 $activePage = 'dashboard';
@@ -58,6 +60,9 @@ require __DIR__ . '/includes/header.php';
             <a class="btn btn-primary" href="practice.php">Start practicing <span aria-hidden="true">→</span></a>
             <a class="btn btn-outline" href="ai-reviews.php">My AI coaching</a>
             <a class="btn btn-outline" href="exams.php">Explore mocks</a>
+            <a class="btn btn-outline" href="pricing.php">My access plan</a>
+            <a class="btn btn-outline" href="teacher-portal.php">Teacher portal</a>
+            <?php if ($isOwner): ?><a class="btn btn-outline" href="admin.php">Owner dashboard</a><?php endif; ?>
             <form method="post" action="logout.php"><?= csrf_field() ?><button type="submit" class="btn btn-outline">Sign out</button></form>
         </div>
     </div>

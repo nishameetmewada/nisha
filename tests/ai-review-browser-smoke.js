@@ -12,6 +12,7 @@ const php = process.env.NISHA_PHP_BIN || '/workspace/.tools/bin/php';
 const artifacts = fs.mkdtempSync('/tmp/nisha-ai-browser-');
 const config = JSON.parse(execFileSync(php, ['-r', `require 'includes/ai-review-service.php'; $sessions=[]; foreach(nisha_learning_catalog() as $course) foreach($course['modules'] as $module) { $exam=nisha_resolve_exam($module['practice_id']); foreach(nisha_exam_items($exam) as $item) if(in_array($item['type'],['essay','spoken'],true) && !isset($sessions[$item['type']])) $sessions[$item['type']]=['exam'=>$exam,'item'=>$item]; } echo json_encode(['configured'=>nisha_ai_configured(),'sessions'=>$sessions]);`], { cwd: root, encoding: 'utf8' }));
 const pteWriting = JSON.parse(execFileSync(php, ['-r', `require 'includes/ai-review-service.php'; echo json_encode(nisha_resolve_exam('practice.pte-academic.writing-summarize-written-text'));`], { cwd: root, encoding: 'utf8' }));
+const fullAcademic = JSON.parse(execFileSync(php, ['-r', `require 'includes/learning-catalog.php'; echo json_encode(nisha_resolve_exam('ielts-academic-01'));`], { cwd: root, encoding: 'utf8' }));
 assert.equal(config.configured, false, 'This no-key HTTP test refuses to run when paid AI is configured.');
 let server, browser, context, page, email;
 let base, checks = 0;
@@ -416,14 +417,14 @@ async function upload(buffer, mime = 'audio/wav') {
     await page.setViewportSize({ width: 390, height: 844 });
     ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'AI review remains usable without page overflow at a mobile width');
     await start('ielts-academic-01');
-    const writingState = await page.evaluate(() => {
+    const writingState = await page.evaluate(exam => {
         const data = JSON.parse(document.querySelector('#exam-data').textContent);
-        const exam = data.exams['ielts-academic-01'];
+        if (data.exams[exam.id].version !== exam.version) throw new Error('The timed fixture must match the server-reserved paper version.');
         const key = `nisha:fullmock:${data.userScope}:${exam.id}:${exam.version}`;
         const state = JSON.parse(localStorage.getItem(key));
         const sectionIndex = exam.sections.findIndex(section => section.items.some(item => item.type === 'essay'));
         return { key, state: { ...state, sectionIndex, itemIndex: 0, sectionDeadline: Date.now() + exam.sections[sectionIndex].duration_seconds * 1000 }, marker: crypto.randomUUID() };
-    });
+    }, fullAcademic);
     await page.addInitScript(({ key, state, marker }) => { if (!sessionStorage.getItem(marker)) { localStorage.setItem(key, JSON.stringify(state)); sessionStorage.setItem(marker, 'used'); } }, writingState);
     await page.reload(); await page.locator('.exam-writing-area').waitFor();
     ok(await page.locator('.ai-review-panel').count() === 0, 'Timed mocks do not expose AI coaching while the test is running');

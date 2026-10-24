@@ -43,6 +43,13 @@ function config(?string $key = null, mixed $default = null): mixed
             'openai_transcription_model' => getenv('NISHA_OPENAI_TRANSCRIPTION_MODEL') ?: 'gpt-4o-mini-transcribe',
             'ai_reviews_per_student_day' => getenv('NISHA_AI_STUDENT_DAILY_LIMIT') ?: 10,
             'ai_reviews_per_day' => getenv('NISHA_AI_DAILY_LIMIT') ?: 100,
+            'admin_user_ids' => getenv('NISHA_ADMIN_USER_IDS') ?: [],
+            'teacher_rewards_enabled' => getenv('NISHA_TEACHER_REWARDS_ENABLED') ?: false,
+            'teacher_reward_share_percent' => getenv('NISHA_TEACHER_REWARD_SHARE_PERCENT') ?: 90,
+            'teacher_reward_currency' => getenv('NISHA_TEACHER_REWARD_CURRENCY') ?: 'AUD',
+            'teacher_qualified_watch_percent' => getenv('NISHA_TEACHER_WATCH_PERCENT') ?: 70,
+            'teacher_paid_views_only' => getenv('NISHA_TEACHER_PAID_VIEWS_ONLY') !== false ? getenv('NISHA_TEACHER_PAID_VIEWS_ONLY') : true,
+            'teacher_video_hosts' => getenv('NISHA_TEACHER_VIDEO_HOSTS') ?: [],
         ];
         $localFile = NISHA_ROOT . '/config/config.php';
         if (is_file($localFile)) {

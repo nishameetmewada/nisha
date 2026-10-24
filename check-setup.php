@@ -60,6 +60,21 @@ foreach ([
     }
 }
 
+$platformGroups = [
+    'Mock access and payments' => ['commerce_settings', 'commerce_settings_audit', 'commerce_trials', 'mock_access_grants', 'mock_paid_sources', 'payment_orders', 'student_entitlements', 'payment_events', 'commerce_refunds'],
+    'Teacher moderation and reward ledgers' => ['user_roles', 'teacher_profiles', 'coaching_videos', 'coaching_watch_sessions', 'coaching_watch_presence', 'coaching_qualified_views', 'teacher_policy_settings', 'teacher_reward_locks', 'teacher_profit_periods', 'teacher_reward_allocations'],
+    'Teacher-reviewed content publications' => ['content_review_versions', 'content_publications', 'content_mock_dependencies'],
+];
+foreach ($platformGroups as $label => $tables) {
+    try {
+        foreach ($tables as $table) db()->query('SELECT 1 FROM ' . $table . ' LIMIT 0');
+        echo 'PASS: ' . $label . ".\n";
+    } catch (Throwable $exception) {
+        $requiredReady = false;
+        echo 'SETUP REQUIRED: ' . $label . ". Import the new database/schema.sql or the matching 004/005/006 migrations; preserve existing data.\n";
+    }
+}
+
 $aiReady = true;
 try {
     db()->query('SELECT id, user_id, request_id, exam_id, exam_version, item_id, attempt_id, exam_name, task_type, mode, response_hash, cache_key, claim_token, status, response_text, review_json, error_code, claimed_at, created_at, updated_at FROM ai_reviews LIMIT 0');
@@ -71,5 +86,11 @@ echo $aiReady ? "PASS: AI review history and usage tables.\n" : "OPTIONAL AI SET
 echo trim((string) config('openai_api_key')) !== ''
     ? "PASS: An OpenAI key is configured. Provider access and billing have not been tested.\n"
     : "OPTIONAL AI SETUP: Add an OpenAI API key privately; see docs/ai-coaching.md.\n";
+if (is_file(__DIR__ . '/includes/commerce.php')) {
+    require_once __DIR__ . '/includes/commerce.php';
+    $payments = nisha_commerce_settings();
+    echo $payments['enabled'] ? "PASS: Checkout is enabled with server configuration present. No Stripe charge or webhook delivery was tested.\n"
+        : "PAYMENT SETUP: Checkout is disabled until private Stripe credentials, signing secret and HTTPS site URL are configured and the owner enables it.\n";
+}
 session_write_close();
 exit($requiredReady ? 0 : 1);

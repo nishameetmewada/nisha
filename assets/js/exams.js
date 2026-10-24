@@ -19,6 +19,8 @@
     let ticker = null;
     let saveTimeout = null;
     let inFlight = false;
+    let starting = false;
+    const pendingStarts = new Map();
     let confirmationOpen = false;
     let storageWarning = '';
     let currentEnvelope = null;
@@ -41,11 +43,14 @@
     };
     const guided = (target = exam) => target?.session_type === 'practice';
     const timed = (target = exam) => target?.timing_mode !== 'untimed';
-    const hasAudio = (target) => items(target).some((question) => target.resources[question.resource_id]?.kind === 'audio');
+    const fullMock = (target) => (target?.session_type || 'full') === 'full';
+    const hasAudio = (target) => typeof target?.has_audio === 'boolean' ? target.has_audio : items(target).some((question) => target.resources[question.resource_id]?.kind === 'audio');
     const feedbackCache = new Map();
     let feedbackRequest = 0;
     const budget = (target) => target.sections.reduce((sum, section) => sum + section.duration_seconds, 0);
-    const items = (target) => target.sections.flatMap((section) => section.items);
+    const items = (target) => target.sections.flatMap((section) => section.items || []);
+    const taskCount = (target) => Number.isInteger(target.item_count) ? target.item_count : items(target).length;
+    const sectionTaskCount = (part) => Number.isInteger(part.item_count) ? part.item_count : (part.items || []).length;
     const section = () => exam.sections[state.sectionIndex];
     const item = () => section().items[state.itemIndex];
     const storageKey = (target) => `nisha:fullmock:${config.userScope}:${target.id}:${target.version}`;
@@ -72,7 +77,7 @@
             }
             if (saved.examId !== target.id || saved.version !== target.version || saved.userScope !== config.userScope || !saved.answers || typeof saved.answers !== 'object' || !Array.isArray(saved.completedSections) || !Number.isFinite(saved.startedAt) || !Number.isFinite(saved.sectionDeadline)) return null;
             if (!['running', 'submit-ready', 'results'].includes(saved.phase)) return null;
-            if (saved.phase === 'running' && (!Number.isInteger(saved.sectionIndex) || saved.sectionIndex < 0 || saved.sectionIndex >= target.sections.length || !Number.isInteger(saved.itemIndex) || saved.itemIndex < 0 || saved.itemIndex >= target.sections[saved.sectionIndex].items.length)) return null;
+            if (saved.phase === 'running' && (!Number.isInteger(saved.sectionIndex) || saved.sectionIndex < 0 || saved.sectionIndex >= target.sections.length || !Number.isInteger(saved.itemIndex) || saved.itemIndex < 0 || saved.itemIndex >= sectionTaskCount(target.sections[saved.sectionIndex]))) return null;
             saved.flags = Array.isArray(saved.flags) ? saved.flags : [];
             saved.played = Array.isArray(saved.played) ? saved.played : [];
             saved.itemClocks = saved.itemClocks && typeof saved.itemClocks === 'object' ? saved.itemClocks : {};
@@ -116,15 +121,15 @@
             const heading = el('h2', '', target.name);
             const description = el('p', 'exam-card-description', target.description);
             const stats = el('div', 'exam-card-stats');
-            stats.append(el('span', '', `${Math.round(budget(target) / 60)} minutes`), el('span', '', `${items(target).length} tasks`), el('span', '', `${target.sections.length} sections`));
+            stats.append(el('span', '', `${Math.round(budget(target) / 60)} minutes`), el('span', '', `${taskCount(target)} tasks`), el('span', '', `${target.sections.length} sections`));
             const list = el('ul', 'exam-card-sections');
             target.sections.forEach((part) => {
                 const li = el('li');
-                li.append(el('strong', '', part.title), el('span', '', `${part.items.length} tasks · ${Math.round(part.duration_seconds / 60)} min`));
+                li.append(el('strong', '', part.title), el('span', '', `${sectionTaskCount(part)} tasks · ${Math.round(part.duration_seconds / 60)} min`));
                 list.append(li);
             });
-            const formatCount = new Set(items(target).map((question) => question.task_type)).size;
-            const note = el('p', 'exam-card-note', target.exam === 'IELTS' ? '40 listening + 40 reading questions, two writing tasks and three speaking parts. Free navigation within each section.' : `${items(target).length} tasks across ${formatCount} question types. Move forward through each item; previous items cannot be revisited.`);
+            const formatCount = target.task_type_count || new Set(items(target).map((question) => question.task_type)).size;
+            const note = el('p', 'exam-card-note', target.exam === 'IELTS' ? '40 listening + 40 reading questions, two writing tasks and three speaking parts. Free navigation within each section.' : `${taskCount(target)} tasks across ${formatCount} question types. Move forward through each item; previous items cannot be revisited.`);
             const buttons = el('div', 'exam-card-actions');
             const start = el('button', 'btn btn-primary', saved ? saved.phase === 'results' ? 'View device result →' : saved.phase === 'submit-ready' ? 'Retry final submission →' : 'Resume my mock →' : 'Prepare for this mock →');
             start.type = 'button';
@@ -156,11 +161,19 @@
     }
 
     function openSetup(id) {
+        if (starting) return;
         selectedExamId = id;
         const target = exams[id];
+        if (!target) return;
+        if (fullMock(target) && !config.signedIn) {
+            view('catalog');
+            accessNotice('exam-catalog-message', 'Sign in to start your first free full mock and keep its result in your account.', 401);
+            return;
+        }
         $('setup-exam-name').textContent = target.name;
         $('setup-format-note').textContent = target.format_note || '';
-        $('setup-duration').textContent = `${timed(target) ? Math.round(budget(target) / 60) + ' min' : 'Untimed'} · ${items(target).length} tasks`;
+        $('setup-duration').textContent = `${timed(target) ? Math.round(budget(target) / 60) + ' min' : 'Untimed'} · ${taskCount(target)} tasks`;
+        notice('setup-access-message', fullMock(target) ? 'Your first full mock is free. Opening a paper reserves that free mock so you can resume it; after submitting, an access pass unlocks more papers.' : 'This practice session does not use your free full mock.');
         $('setup-readiness-note').textContent = timed(target) ? 'I’m ready for a timed session. Leaving or reloading will not pause the clock, and recordings cannot be restored.' : 'I’m ready to practise. I can check each answer, revisit questions and use transcripts. Recordings cannot be restored after a reload.';
         $('begin-exam').textContent = guided(target) ? 'Begin guided practice →' : target.session_type === 'section' ? 'Begin sectional mock →' : 'Begin full mock →';
         $('ready-confirmed').checked = false;
@@ -176,12 +189,72 @@
 
     function updateSetupButton() {
         const target = exams[selectedExamId];
-        $('begin-exam').disabled = !target || !$('ready-confirmed').checked || (hasAudio(target) && !($('assisted-mode').checked || $('audio-confirmed').checked));
+        $('begin-exam').disabled = starting || !target || !$('ready-confirmed').checked || (hasAudio(target) && !($('assisted-mode').checked || $('audio-confirmed').checked));
     }
 
-    function begin() {
-        const target = exams[selectedExamId];
-        if (!target || $('begin-exam').disabled) return;
+    function accessNotice(id, message, statusCode = 0) {
+        notice(id, message);
+        if (statusCode === 401 || statusCode === 402) {
+            const link = el('a', 'exam-text-button', statusCode === 401 ? 'Sign in for my free mock →' : 'View access plans →');
+            link.href = statusCode === 401 ? 'login.php' : 'pricing.php';
+            $(id).append(document.createTextNode(' '), link);
+        }
+    }
+
+    const newAttemptId = () => window.crypto?.randomUUID?.() || `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 14)}`;
+    const startKey = (target) => `nisha:mock-start:${config.userScope}:${target.id}:${target.version}`;
+    function pendingStartId(target) {
+        if (pendingStarts.has(target.id)) return pendingStarts.get(target.id);
+        let id = null;
+        try {
+            const saved = JSON.parse(localStorage.getItem(startKey(target)) || 'null');
+            if (saved?.expiresAt > Date.now() && typeof saved.attemptId === 'string') id = saved.attemptId;
+        } catch (_) { /* The memory reference still supports same-tab retries. */ }
+        const access = config.mockAccess;
+        if (!id && access?.trial_state === 'reserved' && access.trial_exam_id === target.id) id = access.trial_attempt_id;
+        id ||= newAttemptId();
+        pendingStarts.set(target.id, id);
+        try { localStorage.setItem(startKey(target), JSON.stringify({ attemptId: id, expiresAt: Date.now() + lifetime })); } catch (_) { /* Keep the in-memory reference. */ }
+        return id;
+    }
+
+    async function fetchFullMock(target, attemptId) {
+        const controller = new AbortController();
+        const timeout = window.setTimeout(() => controller.abort(), 25000);
+        try {
+            const response = await fetch('api/start-mock.php', {
+                method: 'POST', credentials: 'same-origin', signal: controller.signal,
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]')?.content || '' },
+                body: JSON.stringify({ exam_id: target.id, attempt_id: attemptId }),
+            });
+            let data;
+            try { data = await response.json(); } catch (_) { throw new Error('The website did not return this mock. Your start reference is retained; try again when the connection is available.'); }
+            if (!response.ok || !data.success) { const error = new Error(data.error || 'This full mock could not be opened.'); error.httpStatus = response.status; throw error; }
+            if (data.exam?.id !== target.id || data.grant?.exam_id !== target.id || data.grant?.attempt_id !== attemptId || !fullMock(data.exam) || !Array.isArray(data.exam.sections) || !data.exam.sections.every(part => Array.isArray(part.items) && part.items.length)) throw new Error('This full mock could not be loaded. Please try again.');
+            if (data.access) config.mockAccess = data.access;
+            exams[target.id] = data.exam;
+            return data.exam;
+        } catch (error) {
+            if (error.name === 'AbortError' || error instanceof TypeError) throw new Error('The mock connection stopped before opening the paper. Your start reference is retained; retry to resume the same reservation.');
+            throw error;
+        } finally { window.clearTimeout(timeout); }
+    }
+
+    async function begin() {
+        let target = exams[selectedExamId];
+        if (!target || $('begin-exam').disabled || starting) return;
+        starting = true;
+        updateSetupButton();
+        const attemptId = fullMock(target) ? pendingStartId(target) : newAttemptId();
+        try {
+            if (fullMock(target)) {
+                notice('setup-access-message', 'Opening your full mock and checking account access…');
+                target = await fetchFullMock(target, attemptId);
+            }
+        } catch (error) {
+            accessNotice('setup-access-message', error.message, error.httpStatus);
+            return;
+        } finally { starting = false; updateSetupButton(); }
         stopAudio();
         stopRecording(true);
         clearRecordings();
@@ -191,12 +264,14 @@
         const now = Date.now();
         state = {
             examId: exam.id, version: exam.version, userScope: config.userScope,
-            attemptId: window.crypto?.randomUUID?.() || `attempt-${now}-${Math.random().toString(36).slice(2, 14)}`,
+            attemptId,
             startedAt: now, expiresAt: now + lifetime, updatedAt: now,
             sectionIndex: 0, itemIndex: 0, sectionDeadline: now + exam.sections[0].duration_seconds * 1000,
             answers: {}, flags: [], played: [], completedSections: [], itemClocks: {}, audioEnded: {}, aiDrafts: {}, aiReviews: [],
             assisted: $('assisted-mode').checked, phase: 'running', endedAt: null,
         };
+        pendingStarts.delete(target.id);
+        try { localStorage.removeItem(startKey(target)); } catch (_) { /* The running state is retained independently. */ }
         $('exam-setup-dialog').close();
         saveState();
         renderRunner();
@@ -206,10 +281,18 @@
         announce(timed() ? 'Your session started. The section timer is running.' : 'Guided practice started. Take your time and check each answer.');
     }
 
-    function resume(id) {
-        const target = exams[id];
+    async function resume(id) {
+        if (starting) return;
+        let target = exams[id];
         const saved = loadState(target);
         if (!saved) { openSetup(id); return; }
+        if (fullMock(target) && saved.phase !== 'results') {
+            starting = true;
+            try { target = await fetchFullMock(target, saved.attemptId); }
+            catch (error) { view('catalog'); accessNotice('exam-catalog-message', error.message, error.httpStatus); return; }
+            finally { starting = false; }
+            if (saved.version !== target.version) { view('catalog'); notice('exam-catalog-message', 'This paper changed since your attempt began. Keep a downloaded copy of your responses before starting the updated version.'); return; }
+        }
         stopTimer();
         stopAudio();
         const sameAttempt = state?.attemptId === saved.attemptId && exam?.id === target.id;
@@ -1232,7 +1315,7 @@
             const envelope = await response.json();
             if (!response.ok || !envelope.success || !envelope.result) {
                 const message = response.status === 409 ? 'This mock has been updated since your attempt began. Download your responses below, then start a new attempt; your old answers cannot be marked against changed questions.' : envelope.error || 'The server could not complete your review. Please try again.';
-                throw new Error(message);
+                const error = new Error(message); error.httpStatus = response.status; throw error;
             }
             if (state?.attemptId !== attemptId) return;
             state.phase = 'results';
@@ -1242,7 +1325,7 @@
             announce('Your answer review is ready. Objective points and AI review options are available.');
         } catch (error) {
             if (state?.attemptId === attemptId) {
-                $('submission-message').textContent = `${error.name === 'AbortError' ? 'The connection timed out. The server may still have received your attempt; retrying uses the same attempt ID.' : error.message} Your finished responses are retained. Retry submission or download a copy below.`;
+                accessNotice('submission-message', `${error.name === 'AbortError' ? 'The connection timed out. The server may still have received your attempt; retrying uses the same attempt ID.' : error.message} Your finished responses are retained. Retry submission or download a copy below.`, error.httpStatus);
                 $('retry-submission').hidden = false;
             }
         } finally {
@@ -1290,6 +1373,7 @@
         stopAudio();
         stopRecording(false);
         const result = envelope.result;
+        if (envelope.mock_access) config.mockAccess = envelope.mock_access;
         if (currentEnvelope?.result.attempt_id !== result.attempt_id) resultAIActivity.clear();
         currentEnvelope = envelope;
         currentReview = result.review || [];
