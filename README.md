@@ -6,6 +6,7 @@ The production domain is **https://nishaglobal.com**. See [production launch](do
 
 ## Included
 
+- A bundled Android/iOS mobile app in `mobile/`, with an 80-question offline pack, secure native account storage, optional recordings, online mocks, coaching and history. See [mobile build and deployment](mobile/README.md). Android testing APK and unsigned release AAB are included; iPhone compilation/signing requires a Mac and Apple developer setup.
 - A responsive, original NISHA landing page and mobile navigation.
 - Registration, login, session-based student accounts, and a private dashboard.
 - A searchable practice library for IELTS Academic, IELTS General Training, PTE Academic and PTE Core, with skill filters and question-type exercises.
@@ -50,7 +51,7 @@ A deployment ZIP is provided separately with the project files at its root. It i
 
 For an existing website, preserve **`public_html/config/config.php`** when uploading an update. Import `database/schema.sql` into its configured database if any tables are missing; the import preserves existing tables and records. Uploading the ZIP alone does not connect the website to MySQL or activate OpenAI. If registration shows “temporarily unavailable”, follow the [database setup guide](docs/database-setup.md). An owner with SSH access can run `php check-setup.php` privately for a credential-free report; browser access to that script returns 404.
 
-For this platform upgrade, import migrations **004 through 009** in order, or re-import the complete additive `database/schema.sql`. Sites already on the earlier commerce/teacher platform need only **007_promotions.sql**, **008_admin_accounts.sql** and **009_site_settings.sql**. Follow [administrator setup](docs/admin.md) to create a private owner login or promote a verified existing numeric account ID. Ordinary registration never creates an administrator. Complete [Stripe setup](docs/commerce.md), configure teacher video hosts and rewards, and assign approved teachers to the [content review queue](docs/question-bank.md). Preserve database/API credentials when adding settings from the updated example.
+For this platform upgrade, import migrations **004 through 010** in order, or re-import the complete additive `database/schema.sql`. The mobile update adds **010_mobile_app.sql** to the earlier 007/008/009 platform upgrade. The full schema now contains 38 tables. Follow [administrator setup](docs/admin.md) to create a private owner login or promote a verified existing numeric account ID. Ordinary registration never creates an administrator. Complete [Stripe setup](docs/commerce.md), configure teacher video hosts and rewards, and assign approved teachers to the [content review queue](docs/question-bank.md). Preserve database/API credentials when adding settings from the updated example.
 
 The 30,000/3,000 expansion needs real teacher review and sufficient distinct content. Generated drafts and assembled mock drafts are private review material, not teacher certification. A validation script cannot publish or certify them. The original four starter mocks remain separate and are not represented as teacher-reviewed papers. Live charging requires your Stripe account and webhook; no real charge or automatic teacher bank transfer is made by local tests.
 

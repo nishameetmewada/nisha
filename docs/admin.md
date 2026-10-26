@@ -33,6 +33,10 @@ it; the browser cannot remove a configured owner.
 - `admin-promotions.php`: percent/fixed discounts, UTC windows, usage caps,
   featured offer text and activation controls.
 - `admin-settings.php`: homepage tagline, support contact and public announcement.
+- `admin-deletion.php`: confirmed mobile/web account-deletion requests. Completing
+  a request removes private practice/AI history, anonymises the account and hides
+  teacher content. Financial/reward references are retained without reopening
+  access. The admin must re-enter their password and confirm the action.
 - `content-review.php`: certification still requires an approved teacher profile.
 
 Password, email, status and role changes invalidate existing browser sessions on

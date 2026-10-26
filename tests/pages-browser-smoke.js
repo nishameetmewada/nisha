@@ -13,9 +13,9 @@ if (!['127.0.0.1', 'localhost'].includes(new URL(base).hostname)) throw new Erro
 const php = process.env.NISHA_PHP_BIN || '/workspace/.tools/bin/php';
 const email = `pages-browser-${crypto.randomUUID()}@example.test`;
 const password = crypto.randomBytes(20).toString('hex');
-const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php', 'pricing.php', 'question-bank.php', 'mock-library.php', 'generated-practice.php', 'generated-mocks.php'];
-const privatePages = ['dashboard.php', 'ai-reviews.php', 'logout.php', 'teacher-portal.php', 'coaching.php'];
-const ownerPages = ['admin.php', 'billing-settings.php', 'content-review.php', 'admin-accounts.php', 'admin-promotions.php', 'admin-settings.php'];
+const publicPages = ['index.php', 'practice.php', 'exams.php', 'quick-practice.php', 'login.php', 'register.php', 'pricing.php', 'question-bank.php', 'mock-library.php', 'generated-practice.php', 'generated-mocks.php', 'apps.php', 'mobile-privacy.php'];
+const privatePages = ['dashboard.php', 'ai-reviews.php', 'logout.php', 'teacher-portal.php', 'coaching.php', 'delete-account.php'];
+const ownerPages = ['admin.php', 'billing-settings.php', 'content-review.php', 'admin-accounts.php', 'admin-promotions.php', 'admin-settings.php', 'admin-deletion.php'];
 const errors = [], failures = [], external = [], links = new Set(), assets = new Set();
 let browser, context, page, checks = 0;
 const ok = (condition, message) => { assert(condition, message); checks++; console.log('PASS', message); };

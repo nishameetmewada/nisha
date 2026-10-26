@@ -130,10 +130,16 @@ function nisha_commerce_valid_attempt(string $examId, string $attemptId): void
 }
 
 /** User row lock serialises trial reservations and payment extensions. */
-function nisha_commerce_lock_user(PDO $pdo, int $userId): void
+function nisha_commerce_lock_user(PDO $pdo, int $userId, bool $requireActive = true): void
 {
     $q = $pdo->prepare('SELECT id FROM users WHERE id=? FOR UPDATE'); $q->execute([$userId]);
     if (!$q->fetchColumn()) throw new NishaCommerceException('Sign in to start your mock.', 'login_required', 401);
+    // Trusted settlement must still reconcile a purchase after account closure.
+    // Student-initiated writes always keep the active-account requirement.
+    if (!$requireActive) return;
+    require_once __DIR__ . '/admin-accounts.php';
+    try { nisha_account_require_active($pdo, $userId); }
+    catch (InvalidArgumentException $exception) { throw new NishaCommerceException('This account is unavailable. Sign in again.', 'account_unavailable', 401); }
 }
 
 function nisha_commerce_reserve_mock(PDO $pdo, int $userId, string $examId, string $attemptId): array
@@ -331,7 +337,7 @@ function nisha_commerce_apply_event(PDO $pdo, array $event): array
             // The current order is read and bound again after acquiring locks.
             $q=$pdo->prepare('SELECT user_id FROM payment_orders WHERE id=?');$q->execute([$id]);$orderUser=$q->fetchColumn();
             if($orderUser===false)throw new NishaCommerceException('Payment order was not found.','webhook_order',400);
-            nisha_commerce_lock_user($pdo,(int)$orderUser);
+            nisha_commerce_lock_user($pdo,(int)$orderUser,false);
             $q=$pdo->prepare('SELECT * FROM payment_orders WHERE id=? FOR UPDATE');$q->execute([$id]);$order=$q->fetch();
             if(!$order)throw new NishaCommerceException('Payment order was not found.','webhook_order',400);
             if(($object['mode']??null)!=='payment'||($object['status']??null)!=='complete'||($object['payment_status']??null)!=='paid'||($object['id']??null)!==$order['checkout_id']||($object['client_reference_id']??null)!==$order['id']

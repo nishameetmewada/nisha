@@ -67,6 +67,7 @@ $platformGroups = [
     'Discounts and promotions' => ['commerce_promotions', 'commerce_promotion_orders', 'commerce_promotions_audit'],
     'Administrator account controls' => ['account_security', 'admin_account_locks', 'admin_account_audit'],
     'Public website settings' => ['site_settings', 'site_settings_audit'],
+    'Mobile accounts and deletion requests' => ['mobile_access_tokens', 'mobile_auth_limits', 'mobile_deletion_requests'],
 ];
 foreach ($platformGroups as $label => $tables) {
     try {
@@ -74,7 +75,7 @@ foreach ($platformGroups as $label => $tables) {
         echo 'PASS: ' . $label . ".\n";
     } catch (Throwable $exception) {
         $requiredReady = false;
-        echo 'SETUP REQUIRED: ' . $label . ". Import the new database/schema.sql or the matching 004–009 migrations; preserve existing data.\n";
+        echo 'SETUP REQUIRED: ' . $label . ". Import the new database/schema.sql or the matching 004–010 migrations; preserve existing data.\n";
     }
 }
 

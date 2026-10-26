@@ -63,6 +63,12 @@ function nisha_ai_claim(PDO $pdo, int $userId, array $request): array
     $usageDay = gmdate('Y-m-d');
     try {
         $pdo->beginTransaction();
+        require_once __DIR__ . '/admin-accounts.php';
+        $account = $pdo->prepare('SELECT id FROM users WHERE id=? FOR UPDATE');
+        $account->execute([$userId]);
+        if (!$account->fetchColumn()) throw new NishaAiException('This account is unavailable.', 'ai_account_unavailable', 401, false);
+        try { nisha_account_require_active($pdo, $userId); }
+        catch (InvalidArgumentException $exception) { throw new NishaAiException('This account is unavailable. Sign in again.', 'ai_account_unavailable', 401, false); }
         $statement = $pdo->prepare("INSERT IGNORE INTO ai_review_usage (usage_day,scope_key,used_count) VALUES (?,'global',0)"); $statement->execute([$usageDay]);
         $statement = $pdo->prepare("SELECT used_count FROM ai_review_usage WHERE usage_day = ? AND scope_key = 'global' FOR UPDATE"); $statement->execute([$usageDay]); $global = (int) $statement->fetchColumn();
         $statement = $pdo->prepare('SELECT * FROM ai_reviews WHERE user_id = ? AND request_id = ? LIMIT 1 FOR UPDATE');

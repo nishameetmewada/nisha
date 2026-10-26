@@ -21,6 +21,20 @@ function nisha_account_login_version(PDO $pdo, int $userId): ?int
     return $security['status'] === 'active' ? $security['auth_version'] : null;
 }
 
+/** Call after locking the user before persisting private practice data. */
+function nisha_account_require_active(PDO $pdo, int $userId): void
+{
+    try {
+        $q = $pdo->prepare('SELECT status FROM account_security WHERE user_id=? FOR UPDATE');
+        $q->execute([$userId]);
+        $status = $q->fetchColumn();
+        if ($status !== false && $status !== 'active') throw new InvalidArgumentException('This account is unavailable. Sign in again.');
+    } catch (PDOException $exception) {
+        // Older installs keep account access until the additive upgrade.
+        if ((string)$exception->getCode() !== '42S02') throw $exception;
+    }
+}
+
 function nisha_account_session_valid(PDO $pdo, int $userId, mixed $sessionVersion): bool
 {
     $security = nisha_account_security($pdo, $userId);

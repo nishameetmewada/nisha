@@ -62,6 +62,7 @@ require __DIR__ . '/includes/header.php';
             <a class="btn btn-outline" href="exams.php">Explore mocks</a>
             <a class="btn btn-outline" href="pricing.php">My access plan</a>
             <a class="btn btn-outline" href="teacher-portal.php">Teacher portal</a>
+            <a class="btn btn-outline" href="apps.php">NISHA on your phone</a>
             <?php if ($isOwner): ?><a class="btn btn-outline" href="admin.php">Owner dashboard</a><?php endif; ?>
             <form method="post" action="logout.php"><?= csrf_field() ?><button type="submit" class="btn btn-outline">Sign out</button></form>
         </div>

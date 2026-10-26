@@ -52,11 +52,19 @@ if (!in_array($exam, ['IELTS', 'PTE'], true)
 if (microtime(true) - (float) ($_SESSION['last_attempt_saved'] ?? 0) < 1) {
     respond(429, ['error' => 'Please wait a moment before saving another result.']);
 }
+$saveConnection = null;
 try {
+    require_once dirname(__DIR__) . '/includes/commerce.php';
+    $saveConnection = db();
+    $saveConnection->beginTransaction();
+    nisha_commerce_lock_user($saveConnection, (int)$user['id']);
     $statement = db()->prepare('INSERT INTO attempts (user_id, exam, skill, score, total, duration_seconds) VALUES (?, ?, ?, ?, ?, ?)');
     $statement->execute([$user['id'], $exam, $skill, $score, $total, $duration]);
     $_SESSION['last_attempt_saved'] = microtime(true);
-    respond(201, ['success' => true, 'id' => (int) db()->lastInsertId()]);
+    $savedId = (int)db()->lastInsertId();
+    db()->commit();
+    respond(201, ['success' => true, 'id' => $savedId]);
 } catch (Throwable $exception) {
+    if ($saveConnection instanceof PDO && $saveConnection->inTransaction()) $saveConnection->rollBack();
     respond(503, ['error' => 'We could not save this result right now. Please try again shortly.']);
 }

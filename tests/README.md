@@ -77,8 +77,8 @@ The AI browser suite also restores an old local result, preserves its responses/
 ## All-page browser audit
 
 Run `node tests/pages-browser-smoke.js` against the local PHP server and imported
-database. This loopback-only suite checks 22 public, student, owner and reviewer pages in
-light and dark mode at 320, 390, 768 and 1440 pixels. Its 216 checks cover readable
+database. This loopback-only suite checks 26 public, student, owner and reviewer pages in
+light and dark mode at 320, 390, 768 and 1440 pixels. Its 251 checks cover readable
 inputs, mobile overflow, images, scripts and styles, JavaScript exceptions,
 navigation and keyboard theme controls, internal links and anchors, legacy
 IELTS/PTE practice links, and HTTP launches for all 139 sessions. It also creates
@@ -136,3 +136,36 @@ escaping/defaults, owner permissions, input validation and atomic audit writes.
 checks covering keyword/course/skill filters, literal wildcard text, counts,
 reset/empty-library states, publication boundaries and responsive themes. No
 production lessons, administrators, payments or teacher reviews are created.
+
+## Mobile app and API
+
+The Android debug APK and unsigned release AAB are compiled with JDK21, SDK36 and
+build-tools36.0.0. `apksigner verify` checks the development APK signature; both
+artifacts are checked against every file in the final Vite bundle. This is a
+build check, not an Android/iPhone hardware test or a store approval.
+
+- `php tests/mobile-auth-integrity.php`: 59 isolated checks for opaque hashed
+  tokens, expiry/revocation, rate limits, origins, transport and deletion receipt.
+- `php tests/mobile-learning-integrity.php`: 42 checks for canonical content,
+  full-mock gating, atomic completion, ownership and paid coaching sources.
+- `node tests/mobile-api-http-smoke.js`: 51 real isolated HTTP checks, including
+  cookie rejection, CORS, first-free/paid boundaries and account revocation.
+- `node mobile/tests/offline-integrity.mjs`: 790 checks against 252 actual PHP
+  grading fixtures, plus `php scripts/build-mobile-content.php --check` for all
+  80 bundled generated tasks and their provenance.
+- `node tests/mobile-app-browser-smoke.js`: 71 checks across phone/tablet/desktop
+  widths and both themes. Covers all controls, offline restoration, recording
+  upload, AI request recovery, coaching progress and absolute timers. The
+  fixture disables modern clone/UUID/dialog APIs to exercise iOS15 fallbacks;
+  this does not substitute for testing on an actual iPhone.
+- `node mobile/tests/device-browser-smoke.mjs`: 15 checks for explicit microphone
+  access, PCM-WAV format/limits, cancellation and memory-only browser tokens.
+- `php tests/mobile-deletion-integrity.php`: 44 isolated checks for real
+  anonymisation, private history removal, financial retention, rollback and
+  stale-write protection. A late bound payment can reconcile after closure
+  without reopening the account or recreating private history.
+- `node tests/mobile-deletion-browser-smoke.js`: 26 checks for the public request
+  form, authentication/CSRF, owner queue, actual completion and mobile layouts.
+
+Provider replies in UI tests are explicit fixtures. No paid AI request, Stripe
+charge, live user creation or production account deletion is made by these tests.

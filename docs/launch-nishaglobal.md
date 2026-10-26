@@ -8,9 +8,12 @@ not deploy files, create a live merchant account or configure Hostinger.
 1. Back up Hostinger's website and database. Upload the updated project contents
    into this domain's `public_html`, including `.htaccess` and `.user.ini`.
    Preserve the existing private `config/config.php` and its database/AI values.
-2. Import `database/schema.sql` into that existing database in phpMyAdmin. Its 35
+2. Import `database/schema.sql` into that existing database in phpMyAdmin. Its 38
    additive tables preserve records; importing does not repair incompatible old
-   columns. Sites on the earlier platform need migrations 007, 008 and 009.
+   columns. Sites on the earlier platform need migrations 007, 008, 009 and 010.
+   For the mobile app, deploy `api/mobile.php` and the new includes as well as
+   migration010, then verify `/api/mobile.php?action=health` returns protocol1
+   with `mobile_ready: true`. See [mobile setup](../mobile/README.md).
 3. Complete [administrator setup](admin.md), choosing the password privately.
    Sign in at `https://nishaglobal.com/login.php` and open `/admin.php`.
 4. Verify HTTPS and configure any `www` redirect in Hostinger. Payment return

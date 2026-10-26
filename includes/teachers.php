@@ -377,7 +377,7 @@ function nisha_teacher_watch(array $user, array $input): array
     $pdo = db(); $pdo->beginTransaction();
     try {
         // One student may contribute verified time to one active lesson only.
-        $q = $pdo->prepare('SELECT id FROM users WHERE id=? FOR UPDATE'); $q->execute([(int) $user['id']]);
+        nisha_commerce_lock_user($pdo, (int)$user['id']);
         $period = (string) $pdo->query("SELECT DATE_FORMAT(UTC_TIMESTAMP(),'%Y-%m')")->fetchColumn();
         $revision = (int) $video['revision'];
         $q = $pdo->prepare('SELECT *,UTC_TIMESTAMP(6) AS server_now FROM coaching_watch_sessions WHERE user_id=? AND video_id=? AND period=? AND video_revision=? FOR UPDATE');
