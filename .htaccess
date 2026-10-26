@@ -1,6 +1,11 @@
 DirectoryIndex index.php
 Options -Indexes
 
+# Preserve bearer authentication when PHP runs through a CGI/LSAPI handler.
+<IfModule mod_setenvif.c>
+    SetEnvIfNoCase Authorization "^(Bearer .+)$" HTTP_AUTHORIZATION=$1
+</IfModule>
+
 # Keep source-control, deployment documentation, and database exports private.
 <FilesMatch "(^\.|\.(?:sql|log|ini|env|md|zip)$)">
     Require all denied

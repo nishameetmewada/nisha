@@ -153,9 +153,10 @@ build check, not an Android/iPhone hardware test or a store approval.
 - `node mobile/tests/offline-integrity.mjs`: 790 checks against 252 actual PHP
   grading fixtures, plus `php scripts/build-mobile-content.php --check` for all
   80 bundled generated tasks and their provenance.
-- `node tests/mobile-app-browser-smoke.js`: 71 checks across phone/tablet/desktop
+- `node tests/mobile-app-browser-smoke.js`: 77 checks across phone/tablet/desktop
   widths and both themes. Covers all controls, offline restoration, recording
-  upload, AI request recovery, coaching progress and absolute timers. The
+  upload, hosting upload-cap preflight, AI request recovery, coaching progress
+  and absolute timers. The
   fixture disables modern clone/UUID/dialog APIs to exercise iOS15 fallbacks;
   this does not substitute for testing on an actual iPhone.
 - `node mobile/tests/device-browser-smoke.mjs`: 15 checks for explicit microphone

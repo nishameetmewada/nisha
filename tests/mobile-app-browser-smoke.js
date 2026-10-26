@@ -21,7 +21,7 @@ foreach(nisha_learning_library()['sessions'] as $e){if($e['session_type']!=='pra
 $full=nisha_exams()['ielts-academic-01'];
 echo json_encode(['catalog'=>$catalog,'samples'=>$samples,'full'=>nisha_public_exam($full),'metadata'=>nisha_mobile_exam_metadata($full)],JSON_THROW_ON_ERROR);
 `],{cwd:root,encoding:'utf8'}));
-let server,browser,base,checks=0,apiUnavailable=true,aiInterrupted=true,expireSession=false;
+let server,browser,base,checks=0,apiUnavailable=true,aiInterrupted=true,expireSession=false,serverAudioCap=10*1024*1024;
 const errors=[],requests=[];
 const ok=(condition,label)=>{assert(condition,label);checks++;console.log('PASS',label)};
 function actualFeedback(exam,item,response){return JSON.parse(execFileSync(php,['-r',`require 'includes/mobile-learning.php';$v=json_decode(stream_get_contents(STDIN),true);echo json_encode(nisha_mobile_learning_feedback($v),JSON_THROW_ON_ERROR);`],{cwd:root,input:JSON.stringify({exam_id:exam.id,exam_version:exam.version,item_id:item.id,response}),encoding:'utf8'}));}
@@ -47,7 +47,7 @@ async function finish(page){await page.locator('#finish-practice').click();await
   requests.push({action,method:request.method(),data,url:url.href,authorization:request.headers().authorization||'',contentType:request.headers()['content-type']||'',body:request.postDataBuffer()});
   if(apiUnavailable)return route.abort('internetdisconnected');
   const send=(body,status=200)=>route.fulfill({status,headers,body:JSON.stringify({protocol_version:1,...body})});
-  if(action==='catalog')return send(fixtures.catalog);
+  if(action==='catalog')return send({...fixtures.catalog,ai:{...fixtures.catalog.ai,maxAudioBytes:serverAudioCap}});
   if(action==='login'||action==='register'){assert.equal(data.password,password);return send({success:true,user,access_token:token});}
   if(action==='me')return expireSession?send({error:'Your session ended.',code:'mobile_token_invalid'},401):send({success:true,user,access});
   if(action==='logout')return send({success:true});
@@ -119,6 +119,21 @@ async function finish(page){await page.locator('#finish-practice').click();await
  await page.getByRole('button',{name:'Review my answer',exact:true}).click();await page.getByText('Your AI practice feedback is ready.',{exact:true}).waitFor();
  const uploaded=requests.filter(request=>request.action==='ai_review').at(-1);
  ok(uploaded.contentType.startsWith('multipart/form-data;')&&uploaded.body.includes(Buffer.from('RIFF'))&&!uploaded.body.includes(Buffer.from('name="transcript"')),'An explicit recording review uploads WAV bytes without silently adding a transcript');
+ for(const cap of [100,0]){
+  serverAudioCap=cap;
+  await clickTab(page,'practice');
+  await Promise.all([page.waitForResponse(response=>response.url().includes('action=catalog')),page.getByRole('button',{name:'Question types',exact:true}).click()]);
+  await page.locator('#practice-skill').selectOption('speaking');await page.getByRole('button',{name:'Generated library',exact:true}).click();await page.locator(`[data-session-id="${fixtures.samples.spoken.public.id}"]`).click();await page.locator('[data-record]').click();await page.waitForTimeout(200);await page.locator('[data-record]').click();await page.locator('#answer-controls audio').waitFor();
+  const originalRecording=await page.locator('#answer-controls audio').getAttribute('src');const before=requests.filter(request=>request.action==='ai_review').length;
+  if(cap===0)await page.locator('.ai-panel select').selectOption('recording');
+  await page.getByRole('button',{name:'Review my answer',exact:true}).click();
+  await page.getByText(cap===0?'Recording uploads are unavailable on the website right now. Your recording is kept on this phone. Choose a transcript for AI feedback.':'This recording exceeds the website’s current upload limit. Your recording is kept on this phone. Record a shorter answer or choose a transcript for AI feedback.',{exact:true}).waitFor();
+  ok(requests.filter(request=>request.action==='ai_review').length===before&&await page.locator('#answer-controls audio').getAttribute('src')===originalRecording,`A server WAV limit of ${cap} bytes prevents the upload without losing the recording`);
+  ok(await page.getByRole('button',{name:'Check my pending review'}).isHidden(),'A blocked recording does not create a pending paid review reference');
+  await page.locator('.ai-panel select').selectOption('transcript');await page.locator('#answer-controls textarea').fill('This transcript can still be reviewed when recording upload is limited.');await page.getByRole('button',{name:'Review my answer',exact:true}).click();await page.getByText('Your AI practice feedback is ready.',{exact:true}).waitFor();
+  const latest=requests.filter(request=>request.action==='ai_review').at(-1);
+  ok(latest.contentType.includes('application/json')&&latest.data.transcript==='This transcript can still be reviewed when recording upload is limited.',`Transcript review remains available with the server WAV limit of ${cap} bytes`);
+ }
  await clickTab(page,'coaching');await page.getByRole('button',{name:'Open lesson'}).click();await page.locator('video').waitFor();
  await page.evaluate(()=>{const video=document.querySelector('video');Object.defineProperty(video,'paused',{get:()=>false,configurable:true});Object.defineProperty(video,'ended',{get:()=>false,configurable:true});video.currentTime=12;video.dispatchEvent(new Event('play'));});
  await page.waitForFunction(()=>Boolean(document.querySelector('video')));await page.waitForTimeout(100);await page.evaluate(()=>document.querySelector('video').dispatchEvent(new Event('timeupdate')));await page.waitForTimeout(100);
